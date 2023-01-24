@@ -1,1 +1,5 @@
 pre-commit
+sqlalchemy[asyncio]
+alembic
+fastapi
+sqlalchemy_utils
