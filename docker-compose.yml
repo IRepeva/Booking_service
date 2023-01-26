@@ -1,10 +1,8 @@
 version: '3.8'
 
 services:
-  iasurgg.postgres:
+  postgres:
     image: ${DB_IMAGE}
-    hostname: ${POSTGRES_HOST}
-    container_name: ${POSTGRES_HOST}
     ports:
       - "5432:5432"
     environment:
