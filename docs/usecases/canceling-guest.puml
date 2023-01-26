@@ -1,0 +1,19 @@
+@startuml
+actor Host
+actor Guest
+participant Auth
+participant BookingService
+participant AsyncAPI
+participant NotificationService
+
+database Storage
+
+        Guest -> BookingService: get reservations
+        return list of reservations
+        Guest -> BookingService: cancelling
+        BookingService -> Storage: update order status and cancel reservation
+        BookingService -> Guest: Cancelled
+        BookingService -> NotificationService: request for notification
+        NotificationService -> Host: cancel notification
+
+@enduml
