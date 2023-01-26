@@ -3,13 +3,13 @@ import enum
 from sqlalchemy import (
     CheckConstraint,
     Column,
-    Date,
     DateTime,
     Float,
     ForeignKey,
     Integer,
     String,
     Table,
+    Time,
     sql,
 )
 from sqlalchemy.dialects.postgresql import UUID
@@ -53,7 +53,7 @@ EventSeat = Table(
         default=EventSeatStatus.EMPTY,
         nullable=False,
     ),
-    Column("price", Float),
+    Column("price", Float, default=0),
 )
 
 
@@ -62,7 +62,6 @@ GuestEvent = Table(
     Base.metadata,
     Column("guest_id", ForeignKey("guest.id", ondelete="CASCADE"), primary_key=True),
     Column("event_id", ForeignKey("event.id", ondelete="CASCADE"), primary_key=True),
-    Column("host_score", Integer),
     Column("event_score", Integer),
     CheckConstraint("host_score > 0 AND host_score < 10"),
     CheckConstraint("event_score > 0 AND event_score < 10"),
@@ -81,35 +80,35 @@ class TimeStampMixin:
 class UserMixin:
 
     rating = Column(Float)
-    events = Column(Integer, comment="number of events")
+    events_num = Column(Integer, comment="number of events")
 
-    __table_args__ = (CheckConstraint("0 < rating AND rating < 10"),)
+    __table_args__ = (CheckConstraint("rating > 0  AND rating < 10"),)
 
 
 class Guest(SimplePrimaryKey, TimeStampMixin, UserMixin, Base):
     __tablename__ = "guest"
 
-    events = relationship("Events", secondary=GuestEvent, back_populates="guests")
+    events = relationship("Event", secondary=GuestEvent, back_populates="guests")
 
 
 class Host(SimplePrimaryKey, TimeStampMixin, UserMixin, Base):
     __tablename__ = "host"
 
-    event = relationship("Event", back_populates="user", uselist=True)
-    movie = relationship("PurchasedMovie", back_populates="user", uselist=True)
+    events = relationship("Event", back_populates="user", uselist=True)
+    movies = relationship("PurchasedMovie", back_populates="user", uselist=True)
 
 
 class Place(SimplePrimaryKey, TimeStampMixin, Base):
     __tablename__ = "place"
 
-    name = Column(String, comment="Place name")
-    location = Column(String, comment="Place location")
-    capacity = Column(Integer, comment="Number of seats")
-    open = Column(Date, comment="Place opening time")
-    close = Column(Date, comment="Place closing time")
+    name = Column(String, comment="Place name", unique=True)
+    location = Column(String, comment="Place location", nullable=False)
+    capacity = Column(Integer, comment="Number of seats", nullable=False)
+    open = Column(Time, comment="Place opening time")
+    close = Column(Time, comment="Place closing time")
 
-    seat = relationship("Seat", back_populates="place", uselist=True)
-    event = relationship("Event", back_populates="place", uselist=True)
+    seats = relationship("Seat", back_populates="place", uselist=True)
+    events = relationship("Event", back_populates="place", uselist=True)
 
 
 class Seat(SimplePrimaryKey, TimeStampMixin, Base):
@@ -123,31 +122,39 @@ class Seat(SimplePrimaryKey, TimeStampMixin, Base):
 
     place_id = Column(UUID(as_uuid=True), ForeignKey("place.id", ondelete="CASCADE"))
     place = relationship("Place", back_populates="seat")
-    events = relationship("Events", secondary=EventSeat, back_populates="seats")
+    events = relationship(
+        "Event", secondary=EventSeat, back_populates="seats", uselist=True
+    )
 
 
 class Event(SimplePrimaryKey, TimeStampMixin, Base):
     __tablename__ = "event"
 
     name = Column(String)
-    start = Column(DateTime)
-    duration = Column(Integer, comment="Event duration, s")
+    start = Column(DateTime, nullable=False)
+    duration = Column(Integer, comment="Event duration, s", nullable=False)
     movie_id = Column(UUID(as_uuid=True))
-    notes = Column(String, comment="Extra information")
-    participants = Column(Integer, comment="Number of participants")
+    notes = Column(String, comment="Extra information", nullable=False)
+    participants = Column(Integer, comment="Number of participants", nullable=False)
 
     place_id = Column(UUID(as_uuid=True), ForeignKey("place.id", ondelete="CASCADE"))
     user_id = Column(UUID(as_uuid=True), ForeignKey("host.id", ondelete="CASCADE"))
 
     place = relationship("Place", back_populates="event")
     user = relationship("Host", back_populates="event")
-    seats = relationship("Seat", secondary=EventSeat, back_populates="events")
-    guests = relationship("Guest", secondary=GuestEvent, back_populates="events")
+    seats = relationship(
+        "Seat", secondary=EventSeat, back_populates="events", uselist=True
+    )
+    guests = relationship(
+        "Guest", secondary=GuestEvent, back_populates="events", uselist=True
+    )
 
 
-class PurchasedMovie(SimplePrimaryKey, TimeStampMixin):
-    movie_id = Column(UUID(as_uuid=True))
+class PurchasedMovie(TimeStampMixin):
+    movie_id = Column(UUID(as_uuid=True), primary_key=True)
     movie_name = Column(String)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("host.id", ondelete="CASCADE"))
+    user_id = Column(
+        UUID(as_uuid=True), ForeignKey("host.id", ondelete="CASCADE"), primary_key=True
+    )
 
     user = relationship("Host", back_populates="movie")
