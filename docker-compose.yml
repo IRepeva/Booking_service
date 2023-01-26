@@ -11,5 +11,3 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - ./docker/postgres_db:/var/lib/postgresql/data
-    env_file:
-      - ./.env
