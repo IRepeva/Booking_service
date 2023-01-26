@@ -33,10 +33,11 @@ class Place(Base):
         default=uuid.uuid4
     )
     name = sqlalchemy.Column(sqlalchemy.String(30), unique=True, index=True)
-    location = sqlalchemy.Column(sqlalchemy.String(30))
-    capacity = sqlalchemy.Column(sqlalchemy.Integer)
-    open = sqlalchemy.Column(sqlalchemy.Time)
-    close = sqlalchemy.Column(sqlalchemy.Time)
+    location = sqlalchemy.Column(sqlalchemy.String(30), nullable=False)
+    capacity = sqlalchemy.Column(sqlalchemy.Integer, nullable=False)
+    host_id = sqlalchemy.Column(UUID(as_uuid=True))
+    open = sqlalchemy.Column(sqlalchemy.Time, nullable=False)
+    close = sqlalchemy.Column(sqlalchemy.Time, nullable=False)
 
 
 class PurchasedFilm(Base):

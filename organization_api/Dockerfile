@@ -15,4 +15,3 @@ RUN chmod 777 utils/wait-for-it.sh
 ENTRYPOINT ["utils/wait-for-it.sh"]
 
 CMD ["gunicorn", "main:app", "-w", "10", "-k", "uvicorn.workers.UvicornWorker", "--bind", "0.0.0.0:8000"]
-

@@ -33,7 +33,7 @@ class RedisSettings(BaseSettings):
 
 class Settings(BaseSettings):
     project_name = Field('tickets_booker', env='PROJECT_NAME')
-    free_films_url = 'http://127.0.0.1:8000/api/fake/free_movies'
+    free_films_url = 'http://127.0.0.1:8000/api/v1/movies/free_movies'
     postgres: PostgresSettings = PostgresSettings()
     redis: RedisSettings = RedisSettings()
 

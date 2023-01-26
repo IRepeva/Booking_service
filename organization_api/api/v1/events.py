@@ -1,3 +1,4 @@
+import uuid
 from http import HTTPStatus
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -5,10 +6,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import JSONResponse
 
 from db.postgres import get_db
-from models.schemas import Event, EventInput
+from models.schemas import Event, EventInput, EventEdit
 from services.events import EventService
 from utils.authentication import security, get_token_payload
-# from utils.cache import Cache
 
 router = APIRouter()
 
@@ -22,7 +22,6 @@ async def create_event(
     """
     Create event with the following data:
 
-    - **id**: unique id of the event
     - **name**: each event has a unique name
     - **place_id**: event's location
     - **start**: event's start datetime
@@ -37,19 +36,18 @@ async def create_event(
     if not user_id:
         raise HTTPException(status_code=HTTPStatus.UNAUTHORIZED)
 
-    db_event = await EventService.get_by_name(session, event_name=event.name)
-    if db_event:
-        raise HTTPException(
-            status_code=HTTPStatus.BAD_REQUEST,
-            detail=f"Event with name {event.name} already exists"
-        )
-    return await EventService.create_event(
-        session=session, event_data=event, user_id=user_id
+    await EventService.validate_name(session, event.name)
+    new_event = await EventService.create(
+        session=session, data=event, user_id=user_id
     )
+    return EventService.model_to_dict(new_event)
 
 
-@router.get('/{event_id}', response_model=Event, summary="Get event by id")
-# @Cache()
+@router.get(
+    '/{event_id}',
+    response_model=Event,
+    summary="Get detailed information about event"
+)
 async def event_details(
         event_id: str,
         session: AsyncSession = Depends(get_db)
@@ -57,6 +55,7 @@ async def event_details(
     """
     Get all event information:
 
+    - **id**: each event has a unique id
     - **name**: each event has a unique name
     - **place_id**: event's location
     - **start**: event's start datetime
@@ -73,22 +72,21 @@ async def event_details(
             detail=f'Event with id {event_id} is not found'
         )
 
-    return event
+    return EventService.model_to_dict(event)
 
 
 @router.put(
     "/{event_id}/edit", response_model=Event, summary="Edit the event"
 )
 async def edit_event(
-        event_id: str,
-        new_event: EventInput,
+        event_id: uuid.UUID,
+        new_event: EventEdit,
         session: AsyncSession = Depends(get_db),
         token=Depends(security)
 ):
     """
     Change the event:
 
-    - **name**: each event has a unique name
     - **place_id**: event's location
     - **start**: event's start datetime
     - **duration**: event's duration
@@ -102,22 +100,37 @@ async def edit_event(
     if not user_id:
         raise HTTPException(status_code=HTTPStatus.UNAUTHORIZED)
 
-    event = await EventService.edit_event(
-        session=session, new_event=new_event, event_id=event_id, user_id=user_id
+    event = await EventService.edit(
+        session=session, new_data=new_event, _id=event_id, user_id=user_id
     )
-    if not event:
-        raise HTTPException(
-            status_code=HTTPStatus.NOT_FOUND,
-            detail=f'Event with id {event_id} is not found'
-        )
-    return event
+    return EventService.model_to_dict(event)
+
+
+@router.put(
+    "/{event_id}/rename", response_model=Event, summary="Rename the event"
+)
+async def rename_event(
+        event_id: uuid.UUID,
+        new_name: str,
+        session: AsyncSession = Depends(get_db),
+        token=Depends(security)
+):
+    token_payload = get_token_payload(token.credentials)
+    user_id = token_payload.get('user_id')
+    if not user_id:
+        raise HTTPException(status_code=HTTPStatus.UNAUTHORIZED)
+
+    event = await EventService.rename(
+        session=session, new_name=new_name, _id=event_id, user_id=user_id
+    )
+    return EventService.model_to_dict(event)
 
 
 @router.delete(
     "/{event_id}/delete", summary="Delete event"
 )
 async def delete_event(
-        event_id: str,
+        event_id: uuid.UUID,
         session: AsyncSession = Depends(get_db),
         token=Depends(security)
 ) -> JSONResponse:
@@ -126,8 +139,8 @@ async def delete_event(
     if not user_id:
         raise HTTPException(status_code=HTTPStatus.UNAUTHORIZED)
 
-    event = await EventService.delete_event(
-        session=session, event_id=event_id, user_id=user_id
+    event = await EventService.delete(
+        session=session, _id=event_id, user_id=user_id
     )
     if not event:
         raise HTTPException(
