@@ -68,20 +68,52 @@ class BaseService:
         return db_instance
 
     @classmethod
-    async def get_by_id(cls, session: AsyncSession, _id: str | uuid.UUID):
+    async def get_by_id(
+            cls,
+            session: AsyncSession,
+            _id: str | uuid.UUID,
+            model: Base = None
+    ):
+        if not model:
+            model = cls.model
+
         return (
             await session.execute(
-                select(cls.model).where(cls.model.id == _id)
+                select(model).where(model.id == _id)
             )
         ).scalars().first()
 
     @classmethod
-    async def get_by_name(cls, session: AsyncSession, name: str):
+    async def get_by_name(
+            cls,
+            session: AsyncSession,
+            name: str,
+            model: Base = None
+    ):
+        if not model:
+            model = cls.model
+
         return (
             await session.execute(
-                select(cls.model).where(cls.model.name == name)
+                select(model).where(model.name == name)
             )
         ).scalars().first()
+
+    @classmethod
+    async def get_all(
+            cls,
+            session: AsyncSession,
+            model: Base = None,
+            filters: list | tuple = ()
+    ):
+        if model is None:
+            model = cls.model
+
+        return (
+            await session.execute(
+                select(model).where(*filters)
+            )
+        ).scalars().all()
 
     @classmethod
     async def save(cls, session: AsyncSession, instance: Base):
@@ -104,7 +136,7 @@ class BaseService:
                 detail=f"{cls.instance} with id {_id} is not found"
             )
 
-        if not await cls.is_host(session, _id, user_id):
+        if not await cls.is_host(db_instance.host_id, user_id):
             raise HTTPException(
                 status_code=HTTPStatus.FORBIDDEN,
                 detail=f'Only host can modify the {cls.instance} {_id}'
@@ -126,14 +158,8 @@ class BaseService:
             )
 
     @classmethod
-    async def is_host(
-            cls,
-            session: AsyncSession,
-            _id: uuid.UUID,
-            user_id: uuid.UUID
-    ) -> bool:
-        instance = await cls.get_by_id(session, _id)
-        return True if str(instance.host_id) == user_id else False
+    async def is_host(cls, host_id: uuid.UUID, user_id: uuid.UUID) -> bool:
+        return True if str(host_id) == user_id else False
 
     @classmethod
     def model_to_dict(cls, model_instance: Base):

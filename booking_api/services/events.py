@@ -1,3 +1,4 @@
+import random
 import uuid
 from datetime import datetime, timedelta
 from http import HTTPStatus
@@ -5,15 +6,18 @@ from typing import Optional
 
 import requests
 from fastapi import HTTPException
-from sqlalchemy import Date, cast
+from sqlalchemy import Date, cast, Interval, String
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
 from core.config import settings
 from db.postgres import Base
-from models.models import Event, Place, PurchasedFilm
+from models.models import (
+    Event, Place, PurchasedFilm, EventSeat, EventSeatStatus, Seat
+)
 from models.schemas import EventInput, EventEdit
 from services.base import BaseService
+from services.places import PlaceService
 
 MINIMUM_TIME_INTERVAL = 1800
 
@@ -29,8 +33,19 @@ class EventService(BaseService):
             data: EventInput,
             user_id: str | uuid.UUID
     ) -> Event:
-        await cls.validate(session, data, user_id)
-        return await super().create(session, data, user_id)
+        vacant_seats = await cls.validate(session, data, user_id)
+        event = await super().create(session, data, user_id)
+
+        event_seat_data = {
+            'event_id': event.id, 'status': EventSeatStatus.BOOKED
+        }
+        for seat_id in random.sample(vacant_seats, data.participants):
+            event_seat_data.update({'seat_id': seat_id})
+            insert_stmt = EventSeat.insert().values(**event_seat_data)
+            await session.execute(insert_stmt)
+            await session.commit()
+
+        return event
 
     @classmethod
     async def edit(
@@ -60,22 +75,40 @@ class EventService(BaseService):
             user_id: uuid.UUID,
             _id: uuid.UUID | None = None
     ):
-        await cls.validate_time(
-            session, data.start, data.duration, data.place_id, _id
-        )
-        await cls.validate_participants(
-            session, data.participants, data.place_id
+        place = await cls.validate_place(session, data.place_id, user_id)
+        await cls.validate_time(data.start, data.duration, place)
+        vacant_seats = await cls.validate_participants(
+            session, data.start, data.duration, data.participants, place, _id
         )
         await cls.validate_movie_access(session, data.film_id, user_id)
+        return vacant_seats
+
+    @classmethod
+    async def validate_place(
+            cls,
+            session: AsyncSession,
+            _id: uuid.UUID,
+            user_id: uuid.UUID
+    ):
+        place = await PlaceService.get_by_id(session, _id)
+        if not place:
+            raise HTTPException(
+                status_code=HTTPStatus.NOT_FOUND,
+                detail=f'Place {_id} not found'
+            )
+        if place.host_id and not PlaceService.is_host(place.host_id, user_id):
+            raise HTTPException(
+                status_code=HTTPStatus.FORBIDDEN,
+                detail=f'Only host can organize events at the place {_id}'
+            )
+        return place
 
     @classmethod
     async def validate_time(
             cls,
-            session: AsyncSession,
             event_start: datetime,
             duration: int,
-            place_id: str,
-            _id: uuid.UUID | None = None
+            place: Place,
     ):
         if duration < MINIMUM_TIME_INTERVAL:
             raise HTTPException(
@@ -97,19 +130,10 @@ class EventService(BaseService):
                 detail=f"Event can't be organized in the past"
             )
 
-        place = (
-            await session.execute(
-                select(
-                    Place
-                ).where(
-                    Place.id == place_id
-                )
-            )
-        ).scalars().first()
         if not place:
             raise HTTPException(
                 status_code=HTTPStatus.BAD_REQUEST,
-                detail=f'Place {place_id} not found'
+                detail=f'Place {place.id} not found'
             )
 
         if (
@@ -120,46 +144,18 @@ class EventService(BaseService):
             raise HTTPException(
                 status_code=HTTPStatus.BAD_REQUEST,
                 detail=f'Event can be organized only at working hours: '
-                       f'between {place.open} and {place.close} for {place_id}'
+                       f'between {place.open} and {place.close} for {place.id}'
             )
-
-        place_events = (
-            await session.execute(
-                select(
-                    Event
-                ).where(
-                    Event.place_id == place_id,
-                    (cast(Event.start, Date) == event_start.date())
-                )
-            )
-        ).scalars().all()
-        print(
-            f'PLACE EVENTS: {[(event.id, event.name) for event in place_events]}')
-
-        for place_event in place_events:
-            if _id and place_event.id == _id:
-                print('in continue')
-                continue
-
-            place_event_start = place_event.start
-            place_event_finish = (
-                    place_event_start + timedelta(seconds=place_event.duration)
-            )
-            print(f'exist: {place_event_start, place_event_finish}, '
-                  f'want: {event_start, event_finish}, '
-                  f'so {event_start <= place_event_finish, place_event_start <= event_finish}')
-            if (
-                    event_start < place_event_finish
-                    and place_event_start <= event_finish
-            ):
-                raise HTTPException(
-                    status_code=HTTPStatus.BAD_REQUEST,
-                    detail=f'The place is already occupied for this period'
-                )
 
     @classmethod
     async def validate_participants(
-            cls, session: AsyncSession, participants: int, place_id: str
+            cls,
+            session: AsyncSession,
+            event_start: datetime,
+            duration: int,
+            participants: int,
+            place: Place,
+            _id: uuid.UUID | None = None
     ):
         if participants <= 0:
             raise HTTPException(
@@ -167,22 +163,40 @@ class EventService(BaseService):
                 detail=f'The event should be organized '
                        f'with at least 1 participant, not {participants}'
             )
+        event_finish = event_start + timedelta(seconds=duration)
 
-        place_capacity = (
-            await session.execute(
-                select(
-                    Place.capacity
-                ).where(
-                    Place.id == place_id
+        filters = (
+            Event.place_id == place.id,
+            (cast(Event.start, Date) == event_start.date()),
+            event_start < Event.start + cast(
+                cast(Event.duration, String) + ' seconds', Interval
+            ),
+            Event.start < event_finish
+        )
+        if _id:
+            filters += (Event.id != _id,)
+        place_events = await cls.get_all(session, filters=filters)
+
+        vacant_seats = None
+        for place_event in place_events:
+            vacant_seats = await cls.get_vacant_seats(session, place_event.id)
+            if not vacant_seats:
+                raise HTTPException(
+                    status_code=HTTPStatus.BAD_REQUEST,
+                    detail=f'The place is already occupied for this period'
                 )
-            )
-        ).scalars().first()
-        if participants > place_capacity:
-            raise HTTPException(
-                status_code=HTTPStatus.BAD_REQUEST,
-                detail=f'The capacity of the {place_id} - {place_capacity}. '
-                       f'It is not enough for the {participants} people'
-            )
+
+            if participants > len(vacant_seats):
+                raise HTTPException(
+                    status_code=HTTPStatus.BAD_REQUEST,
+                    detail=f'There are {len(vacant_seats)} vacant seats. '
+                           f'It is not enough for {participants} people'
+                )
+        return (
+            vacant_seats if vacant_seats
+            else await cls.get_all(session, Seat.id,
+                                   (Seat.place_id == place.id,))
+        )
 
     @classmethod
     async def validate_movie_access(
@@ -197,17 +211,25 @@ class EventService(BaseService):
         if film_id in response:
             return
 
-        purchased_movies = (
-            await session.execute(
-                select(
-                    PurchasedFilm
-                ).where(
-                    PurchasedFilm.user_id == user_id
-                )
-            )
-        ).scalars().all()
+        purchased_movies = await cls.get_all(
+            session, PurchasedFilm, filters=(PurchasedFilm.user_id == user_id,)
+        )
         if film_id not in [movie.film_id for movie in purchased_movies]:
             raise HTTPException(
                 status_code=HTTPStatus.BAD_REQUEST,
                 detail=f'The {film_id} neither free nor bought'
             )
+
+    @classmethod
+    async def get_vacant_seats(cls, session: AsyncSession, event_id: uuid.UUID):
+        return (
+            await session.execute(
+                select(Seat).join(
+                    EventSeat,
+                    Seat.id == EventSeat.c.seat_id
+                ).where(
+                    EventSeat.c.status == EventSeatStatus.EMPTY,
+                    EventSeat.c.event_id == event_id
+                )
+            )
+        ).all()

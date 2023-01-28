@@ -34,4 +34,4 @@ class PlaceInput(PlaceEdit):
 
 class Place(PlaceInput):
     id: uuid.UUID | str
-    host_id: uuid.UUID | str
+    host_id: uuid.UUID | str | None

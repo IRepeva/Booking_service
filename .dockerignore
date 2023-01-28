@@ -3,7 +3,7 @@
 **/.git
 **/.gitignore
 **/.env
-organization_api/Dockerfile
+booking_api/Dockerfile
 README.md
 **/docker-compose.yml
 **/venv
