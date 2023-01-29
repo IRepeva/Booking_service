@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 sys.path += [str(pathlib.Path(__file__).parent.parent.parent.parent)]
 
 from config.base import app_cofig  # noqa
-from db.tables import Base  # noqa
+from db.tables.base import Base  # noqa
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
