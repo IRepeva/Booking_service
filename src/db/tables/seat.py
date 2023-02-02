@@ -29,11 +29,11 @@ class Seat(SimplePrimaryKey, TimeStampMixin, Base):
     location_id = Column(
         UUID(as_uuid=True), ForeignKey("location.id", ondelete="CASCADE")
     )
-    location = relationship("location", back_populates="seat")
+    location = relationship("Location", back_populates="seats")
 
-    events = relationship(
-        "Event", secondary=Booking, back_populates="seats", uselist=True
+    seat_events = relationship(
+        "Event", secondary=Booking, back_populates="event_seats", uselist=True
     )
-    guests = relationship(
-        "Guest", secondary=Booking, back_populates="seats", uselist=True
+    seat_guests = relationship(
+        "Guest", secondary=Booking, back_populates="guest_seats", uselist=True
     )

@@ -8,18 +8,18 @@ from db.tables.mixins import SimplePrimaryKey, TimeStampMixin, UserMixin
 
 class Guest(SimplePrimaryKey, TimeStampMixin, UserMixin, Base):
     __tablename__ = "guest"
-    events = relationship(
-        "Event", secondary=Booking, back_populates="guests", uselist=True
+    guest_events = relationship(
+        "Event", secondary=Booking, back_populates="event_guests", uselist=True
     )
-    seats = relationship(
-        "Seat", secondary=Booking, back_populates="guests", uselist=True
+    guest_seats = relationship(
+        "Seat", secondary=Booking, back_populates="seat_guests", uselist=True
     )
 
 
 class Host(SimplePrimaryKey, TimeStampMixin, UserMixin, Base):
     __tablename__ = "host"
 
-    events = relationship("Event", back_populates="user", uselist=True)
+    events = relationship("Event", back_populates="host", uselist=True)
     movies = relationship(
         "PurchasedMovie",
         secondary=PurchasedMovieHost,
