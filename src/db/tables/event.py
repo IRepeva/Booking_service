@@ -25,11 +25,15 @@ class Event(SimplePrimaryKey, TimeStampMixin, Base):
     host_id = Column(UUID(as_uuid=True), ForeignKey("host.id", ondelete="CASCADE"))
 
     location = relationship("Location", back_populates="events")
-    host = relationship("Host", back_populates="event")
+    host = relationship("Host", back_populates="events")
 
-    seats = relationship(
-        "Seat", secondary=Booking, back_populates="events", uselist=True
+    event_seats = relationship(
+        "Seat", secondary=Booking, back_populates="seat_events", uselist=True
     )
-    guests = relationship(
-        "Guest", secondary=Booking, back_populates="events", uselist=True
+    event_guests = relationship(
+        "Guest",
+        secondary=Booking,
+        back_populates="guest_events",
+        uselist=True,
+        overlaps="event_seats",
     )
