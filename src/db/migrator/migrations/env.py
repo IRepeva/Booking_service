@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 
 sys.path += [str(pathlib.Path(__file__).parent.parent.parent.parent)]
 
-from config.base import get_settings  # noqa
+from config.base import settings as app_config  # noqa
 from db.tables.base import Base  # noqa
 
 # this is the Alembic Config object, which provides
@@ -32,9 +32,6 @@ target_metadata = Base.metadata
 # can be acquired:
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
-
-app_config = get_settings()
-
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:

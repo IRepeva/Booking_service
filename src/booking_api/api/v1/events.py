@@ -25,9 +25,9 @@ async def create_event(
     - **start**: event's start datetime
     - **duration**: event's duration
     - **host_id**: event's organizer
-    - **film_id**: film of the event
+    - **movie_id**: film of the event
     - **participants**: number of participants
-    - **comments**: any additional information
+    - **notes**: any additional information
     """
     token_payload = get_token_payload(token.credentials)
     user_id = token_payload.get("user_id")
@@ -43,7 +43,7 @@ async def create_event(
     "/{event_id}", response_model=Event, summary="Get detailed information about event"
 )
 async def event_details(
-    event_id: str, session: AsyncSession = Depends(get_db)
+    event_id: uuid.UUID, session: AsyncSession = Depends(get_db)
 ) -> Event:
     """
     Get all event information:
@@ -54,9 +54,9 @@ async def event_details(
     - **start**: event's start datetime
     - **duration**: event's duration
     - **host_id**: event's organizer
-    - **film_id**: film of the event
+    - **movie_id**: film of the event
     - **participants**: number of participants
-    - **comments**: any additional information
+    - **notes**: any additional information
     """
     event = await EventService.get_by_id(session, event_id)
     if not event:
@@ -82,9 +82,9 @@ async def edit_event(
     - **start**: event's start datetime
     - **duration**: event's duration
     - **host_id**: event's organizer
-    - **film_id**: film of the event
+    - **movie_id**: film of the event
     - **participants**: number of participants
-    - **comments**: any additional information
+    - **notes**: any additional information
     """
     token_payload = get_token_payload(token.credentials)
     user_id = token_payload.get("user_id")

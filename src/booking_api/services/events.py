@@ -14,7 +14,15 @@ from booking_api.models.schemas import EventEdit, EventInput
 from booking_api.services.base import BaseService
 from booking_api.services.places import PlaceService
 from config.base import settings
-from db.tables import Booking, BookingStatus, Event, Location, PurchasedMovie, Seat
+from db.tables import (
+    Booking,
+    BookingStatus,
+    Event,
+    Location,
+    PurchasedMovie,
+    PurchasedMovieHost,
+    Seat,
+)
 from db.utils.postgres import Base
 
 MINIMUM_TIME_INTERVAL = 1800
@@ -53,9 +61,9 @@ class EventService(BaseService):
 
         db_event.start = new_data.start
         db_event.duration = new_data.duration
-        db_event.place_id = new_data.place_id
-        db_event.film_id = new_data.film_id
-        db_event.comments = new_data.comments
+        db_event.location_id = new_data.location_id
+        db_event.movie_id = new_data.movie_id
+        db_event.notes = new_data.notes
         db_event.participants = new_data.participants
 
         return await cls.save(session, db_event)
@@ -68,12 +76,12 @@ class EventService(BaseService):
         user_id: uuid.UUID,
         _id: uuid.UUID | None = None,
     ):
-        place = await cls.validate_place(session, data.place_id, user_id)
+        place = await cls.validate_place(session, data.location_id, user_id)
         await cls.validate_time(data.start, data.duration, place)
         vacant_seats = await cls.validate_participants(
             session, data.start, data.duration, data.participants, place, _id
         )
-        await cls.validate_movie_access(session, data.film_id, user_id)
+        await cls.validate_movie_access(session, data.movie_id, user_id)
         return vacant_seats
 
     @classmethod
@@ -85,7 +93,7 @@ class EventService(BaseService):
             raise HTTPException(
                 status_code=HTTPStatus.NOT_FOUND, detail=f"Place {_id} not found"
             )
-        if place.host_id and not PlaceService.is_host(place.host_id, user_id):
+        if place.host_id and not await PlaceService.is_host(place.host_id, user_id):
             raise HTTPException(
                 status_code=HTTPStatus.FORBIDDEN,
                 detail=f"Only host can organize events at the place {_id}",
@@ -154,7 +162,7 @@ class EventService(BaseService):
         event_finish = event_start + timedelta(seconds=duration)
 
         filters = (
-            Event.place_id == place.id,
+            Event.location_id == place.id,
             (cast(Event.start, Date) == event_start.date()),
             event_start
             < Event.start + cast(cast(Event.duration, String) + " seconds", Interval),
@@ -162,7 +170,7 @@ class EventService(BaseService):
         )
         if _id:
             filters += (Event.id != _id,)
-        place_events = await cls.get_all(session, filters=filters)
+        place_events = await super().get_all(session, filters=filters)
 
         vacant_seats = None
         for place_event in place_events:
@@ -182,26 +190,29 @@ class EventService(BaseService):
         return (
             vacant_seats
             if vacant_seats
-            else await cls.get_all(session, Seat.id, (Seat.place_id == place.id,))
+            else await super().get_all(
+                session, Seat.id, (Seat.location_id == place.id,)
+            )
         )
 
     @classmethod
     async def validate_movie_access(
-        cls, session: AsyncSession, film_id: uuid.UUID, user_id: uuid.UUID
+        cls, session: AsyncSession, movie_id: uuid.UUID, user_id: uuid.UUID
     ):
         response = requests.get(url=settings.free_films_url)
         if response.status_code != HTTPStatus.OK:
             raise HTTPException(status_code=response.status_code, detail=response.text)
-        if film_id in response:
+
+        if str(movie_id) in response.json():
             return
 
         purchased_movies = await cls.get_all(
-            session, PurchasedMovie, filters=(PurchasedMovie.user_id == user_id,)
+            session, filters=(PurchasedMovieHost.c.host_id == user_id,)
         )
-        if film_id not in [movie.film_id for movie in purchased_movies]:
+        if movie_id not in (movie.movie_id for movie in purchased_movies):
             raise HTTPException(
                 status_code=HTTPStatus.BAD_REQUEST,
-                detail=f"The {film_id} neither free nor bought",
+                detail=f"The {movie_id} neither free nor bought",
             )
 
     @classmethod
@@ -216,3 +227,18 @@ class EventService(BaseService):
                 )
             )
         ).all()
+
+    @classmethod
+    async def get_all(
+        cls, session: AsyncSession, filters: list | tuple = (), *args, **kwargs
+    ):
+        stmt = (
+            select(PurchasedMovie)
+            .join(
+                PurchasedMovieHost,
+                PurchasedMovieHost.c.purchased_movie_id == PurchasedMovie.movie_id,
+            )
+            .where(*filters)
+        )
+
+        return (await session.execute(stmt)).scalars().all()

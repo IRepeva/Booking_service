@@ -3,6 +3,16 @@ version: '3.8'
 services:
   booking_api:
     container_name: booking_api
+    build:
+      context: .
+      dockerfile: deploy/api.Dockerfile
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+    ports:
+      - "8000"
+
   postgres:
     image: ${DB_IMAGE}
     ports:

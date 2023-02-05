@@ -34,7 +34,7 @@ class PlaceService(BaseService):
         db_place = await cls.validate_host(session, _id, user_id)
         cls.validate(new_data)
 
-        db_place.location = new_data.location
+        db_place.coordinates = new_data.coordinates
         db_place.capacity = new_data.capacity
         db_place.open = new_data.open
         db_place.close = new_data.close

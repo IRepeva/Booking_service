@@ -5,11 +5,11 @@ from booking_api.models.mixin import MixinModel
 
 
 class EventEdit(MixinModel):
-    place_id: uuid.UUID | str
+    location_id: uuid.UUID
     start: datetime
     duration: int
-    film_id: uuid.UUID | str
-    comments: str | None
+    movie_id: uuid.UUID
+    notes: str | None
     participants: int
 
 
@@ -18,11 +18,11 @@ class EventInput(EventEdit):
 
 
 class Event(EventInput):
-    id: uuid.UUID | str
+    id: uuid.UUID
 
 
 class PlaceEdit(MixinModel):
-    location: str
+    coordinates: str
     capacity: int
     open: time
     close: time
@@ -33,5 +33,5 @@ class PlaceInput(PlaceEdit):
 
 
 class Place(PlaceInput):
-    id: uuid.UUID | str
-    host_id: uuid.UUID | str | None
+    id: uuid.UUID
+    host_id: uuid.UUID | None
