@@ -10,7 +10,7 @@ from booking_api.services.places import PlaceService
 from booking_api.utils.authentication import get_token_payload, security
 from db.utils.postgres import get_db
 
-router = APIRouter(prefix="places")
+router = APIRouter(prefix="/places")
 
 
 @router.post("/add", response_model=Place, summary="Add event's location")

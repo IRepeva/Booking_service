@@ -17,7 +17,7 @@ class PostgresConfig(BaseSettings):
     port: int = Field(default=5432)
 
     class Config:
-        env_prefix = "postgres"
+        env_prefix = "postgres_"
 
     @property
     def dsn(self):
@@ -33,7 +33,7 @@ class RedisSettings(BaseSettings):
 
 class Settings(BaseSettings):
     project_name = Field("tickets_booker", env="PROJECT_NAME")
-    free_films_url = "http://127.0.0.1:8000/api/v1/movies/free_movies"
+    free_films_url = "http://127.0.0.1:8000/booking_api/v1/movies/free_movies"
     postgres: PostgresConfig = PostgresConfig()
     redis: RedisSettings = RedisSettings()
 

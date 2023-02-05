@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, String, Time
+from sqlalchemy import Column, ForeignKey, Integer, String, Time
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
 from db.tables.base import Base
@@ -13,6 +14,9 @@ class Location(SimplePrimaryKey, TimeStampMixin, Base):
     capacity = Column(Integer, comment="Number of seats", nullable=False)
     open = Column(Time, comment="location opening time", nullable=False)
     close = Column(Time, comment="location closing time", nullable=False)
+    host_id = Column(
+        "host_id", UUID(as_uuid=True), ForeignKey("host.id", ondelete="CASCADE")
+    )
 
     seats = relationship("Seat", back_populates="location", uselist=True)
     events = relationship("Event", back_populates="location", uselist=True)

@@ -17,10 +17,12 @@ class Event(SimplePrimaryKey, TimeStampMixin, Base):
     participants = Column(Integer, comment="Number of participants", nullable=False)
 
     movie_id = Column(
-        "movie_id", ForeignKey("purchased_movie.movie_id", ondelete="CASCADE")
+        "movie_id",
+        UUID(as_uuid=True),
+        ForeignKey("purchased_movie.movie_id", ondelete="CASCADE"),
     )
     location_id = Column(
-        UUID(as_uuid=True), ForeignKey("location.id", ondelete="CASCADE")
+        "location_id", UUID(as_uuid=True), ForeignKey("location.id", ondelete="CASCADE")
     )
     host_id = Column(UUID(as_uuid=True), ForeignKey("host.id", ondelete="CASCADE"))
 

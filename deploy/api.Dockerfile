@@ -6,12 +6,12 @@ WORKDIR /booking_api
 
 EXPOSE 8000/tcp
 
-COPY ./requirements.txt .
+COPY ./deploy/requirements.txt .
 RUN  pip install --upgrade pip && pip install -r requirements.txt --no-cache-dir
 
-COPY ./booking_api .
-RUN chmod 777 utils/wait-for-it.sh
+COPY ./src .
+RUN chmod 777 booking_api/utils/wait-for-it.sh
 
-ENTRYPOINT ["utils/wait-for-it.sh"]
+ENTRYPOINT ["booking_api/utils/wait-for-it.sh"]
 
 CMD ["gunicorn", "main:app", "-w", "10", "-k", "uvicorn.workers.UvicornWorker", "--bind", "0.0.0.0:8000"]
