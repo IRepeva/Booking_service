@@ -8,8 +8,8 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
-from db.postgres import Base
-from models.models import Place
+from booking_api.models.schemas import Place
+from db.utils.postgres import Base
 
 
 class BaseService:
@@ -18,13 +18,10 @@ class BaseService:
 
     @classmethod
     async def create(
-            cls,
-            session: AsyncSession,
-            data: BaseModel,
-            user_id: str | uuid.UUID
+        cls, session: AsyncSession, data: BaseModel, user_id: str | uuid.UUID
     ) -> Base:
         data = data.dict()
-        data.update({'host_id': user_id})
+        data.update({"host_id": user_id})
 
         instance = cls.model(**data)
         return await cls.save(session, instance)
@@ -32,21 +29,17 @@ class BaseService:
     @classmethod
     @abstractmethod
     async def edit(
-            cls,
-            session: AsyncSession,
-            new_data: BaseModel,
-            _id: uuid.UUID,
-            user_id: uuid.UUID
+        cls,
+        session: AsyncSession,
+        new_data: BaseModel,
+        _id: uuid.UUID,
+        user_id: uuid.UUID,
     ) -> Optional[BaseModel]:
         ...
 
     @classmethod
     async def rename(
-            cls,
-            session: AsyncSession,
-            new_name: str,
-            _id: uuid.UUID,
-            user_id: uuid.UUID
+        cls, session: AsyncSession, new_name: str, _id: uuid.UUID, user_id: uuid.UUID
     ) -> Optional[Place]:
         db_instance = await cls.validate_host(session, _id, user_id)
         await cls.validate_name(session, new_name)
@@ -56,10 +49,7 @@ class BaseService:
 
     @classmethod
     async def delete(
-            cls,
-            session: AsyncSession,
-            _id: uuid.UUID,
-            user_id: uuid.UUID
+        cls, session: AsyncSession, _id: uuid.UUID, user_id: uuid.UUID
     ) -> Optional[Place]:
         db_instance = await cls.validate_host(session, _id, user_id)
 
@@ -69,51 +59,36 @@ class BaseService:
 
     @classmethod
     async def get_by_id(
-            cls,
-            session: AsyncSession,
-            _id: str | uuid.UUID,
-            model: Base = None
+        cls, session: AsyncSession, _id: str | uuid.UUID, model: Base = None
     ):
         if not model:
             model = cls.model
 
         return (
-            await session.execute(
-                select(model).where(model.id == _id)
-            )
-        ).scalars().first()
+            (await session.execute(select(model).where(model.id == _id)))
+            .scalars()
+            .first()
+        )
 
     @classmethod
-    async def get_by_name(
-            cls,
-            session: AsyncSession,
-            name: str,
-            model: Base = None
-    ):
+    async def get_by_name(cls, session: AsyncSession, name: str, model: Base = None):
         if not model:
             model = cls.model
 
         return (
-            await session.execute(
-                select(model).where(model.name == name)
-            )
-        ).scalars().first()
+            (await session.execute(select(model).where(model.name == name)))
+            .scalars()
+            .first()
+        )
 
     @classmethod
     async def get_all(
-            cls,
-            session: AsyncSession,
-            model: Base = None,
-            filters: list | tuple = ()
+        cls, session: AsyncSession, model: Base = None, filters: list | tuple = ()
     ):
         if model is None:
             model = cls.model
 
-        return (
-            await session.execute(
-                select(model).where(*filters)
-            )
-        ).scalars().all()
+        return (await session.execute(select(model).where(*filters))).scalars().all()
 
     @classmethod
     async def save(cls, session: AsyncSession, instance: Base):
@@ -124,37 +99,30 @@ class BaseService:
 
     @classmethod
     async def validate_host(
-            cls,
-            session: AsyncSession,
-            _id: uuid.UUID,
-            user_id: uuid.UUID
+        cls, session: AsyncSession, _id: uuid.UUID, user_id: uuid.UUID
     ):
         db_instance = await cls.get_by_id(session, _id)
         if not db_instance:
             raise HTTPException(
                 status_code=HTTPStatus.NOT_FOUND,
-                detail=f"{cls.instance} with id {_id} is not found"
+                detail=f"{cls.instance} with id {_id} is not found",
             )
 
         if not await cls.is_host(db_instance.host_id, user_id):
             raise HTTPException(
                 status_code=HTTPStatus.FORBIDDEN,
-                detail=f'Only host can modify the {cls.instance} {_id}'
+                detail=f"Only host can modify the {cls.instance} {_id}",
             )
 
         return db_instance
 
     @classmethod
-    async def validate_name(
-            cls,
-            session: AsyncSession,
-            name: str
-    ):
+    async def validate_name(cls, session: AsyncSession, name: str):
         db_instance = await cls.get_by_name(session, name=name)
         if db_instance:
             raise HTTPException(
                 status_code=HTTPStatus.BAD_REQUEST,
-                detail=f"{cls.instance} with name {name} already exists"
+                detail=f"{cls.instance} with name {name} already exists",
             )
 
     @classmethod

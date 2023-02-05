@@ -3,37 +3,34 @@ import uuid
 from http import HTTPStatus
 from typing import Optional
 
+from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from db.postgres import Base
-from models.models import Place
-from models.schemas import PlaceInput, PlaceEdit
-from fastapi import HTTPException
-from services.base import BaseService
+from booking_api.models.schemas import PlaceEdit, PlaceInput
+from booking_api.services.base import BaseService
+from db.tables import Location
+from db.utils.postgres import Base
 
 
 class PlaceService(BaseService):
-    model: Base = Place
-    instance: str = 'place'
+    model: Base = Location
+    instance: str = "place"
 
     @classmethod
     async def create(
-            cls,
-            session: AsyncSession,
-            data: PlaceInput,
-            user_id: str | uuid.UUID
-    ) -> Place:
+        cls, session: AsyncSession, data: PlaceInput, user_id: str | uuid.UUID
+    ) -> Location:
         cls.validate(data)
         return await super().create(session, data, user_id)
 
     @classmethod
     async def edit(
-            cls,
-            session: AsyncSession,
-            new_data: PlaceEdit,
-            _id: uuid.UUID,
-            user_id: uuid.UUID
-    ) -> Optional[Place]:
+        cls,
+        session: AsyncSession,
+        new_data: PlaceEdit,
+        _id: uuid.UUID,
+        user_id: uuid.UUID,
+    ) -> Optional[Location]:
         db_place = await cls.validate_host(session, _id, user_id)
         cls.validate(new_data)
 
@@ -53,8 +50,7 @@ class PlaceService(BaseService):
         if capacity <= 0:
             raise HTTPException(
                 status_code=HTTPStatus.BAD_REQUEST,
-                detail=f"Capacity of the place can't be {capacity}, "
-                       f"should be > 0"
+                detail=f"Capacity of the place can't be {capacity}, " f"should be > 0",
             )
 
     @classmethod
@@ -63,5 +59,5 @@ class PlaceService(BaseService):
             raise HTTPException(
                 status_code=HTTPStatus.BAD_REQUEST,
                 detail=f"Close hours can't be less than open hours: "
-                       f"{close_time} <= {open_time}"
+                f"{close_time} <= {open_time}",
             )

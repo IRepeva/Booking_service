@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, time
 
-from models.mixin import MixinModel
+from booking_api.models.mixin import MixinModel
 
 
 class EventEdit(MixinModel):
