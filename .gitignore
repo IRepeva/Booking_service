@@ -1,11 +1,19 @@
-.idea/
+# Byte-compiled / optimized / DLL files
+__pycache__/
 
-venv/
+# Environments
+**/.env
 
-.env
+# python environments
+env
+venv
+
+# other
+**/.idea
+*.xml
+
+# Default ignored files
+/shelf/
+/workspace.xml
 
 **/.DS_Store
-
-__pycache__
-
-docker/postgres_db

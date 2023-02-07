@@ -34,8 +34,7 @@ Booking = Table(
         "guest_id",
         UUID(as_uuid=True),
         ForeignKey("guest.id", ondelete="CASCADE"),
-        primary_key=True,
-        nullable=False,
+        nullable=True,
     ),
     Column(
         "status",

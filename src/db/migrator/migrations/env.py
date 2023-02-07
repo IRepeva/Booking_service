@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 
 sys.path += [str(pathlib.Path(__file__).parent.parent.parent.parent)]
 
-from config.base import app_cofig  # noqa
+from config.base import settings as app_config  # noqa
 from db.tables.base import Base  # noqa
 
 # this is the Alembic Config object, which provides
@@ -33,17 +33,6 @@ target_metadata = Base.metadata
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
 
-
-def get_url():
-    return "postgresql+asyncpg://%s:%s@%s:%s/%s" % (
-        app_cofig.db.user,
-        app_cofig.db.password,
-        app_cofig.db.host,
-        app_cofig.db.port,
-        app_cofig.db.db,
-    )
-
-
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
 # my_important_option = config.get_main_option("my_important_option")
@@ -62,7 +51,7 @@ def run_migrations_offline() -> None:
     script output.
 
     """
-    url = config.get_main_option("sqlalchemy.url", get_url())
+    url = config.get_main_option("sqlalchemy.url", app_config.postgres.dsn)
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -88,7 +77,7 @@ async def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
-    connectable = AsyncEngine(create_engine(get_url()))
+    connectable = AsyncEngine(create_engine(app_config.postgres.dsn))
 
     async with connectable.connect() as connection:
         await connection.run_sync(do_run_migrations)
