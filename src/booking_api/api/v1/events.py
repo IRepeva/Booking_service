@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import JSONResponse
 
-from booking_api.models.schemas import Event, EventEdit, EventInput
+from booking_api.models.schemas import Event, EventInput
 from booking_api.services.events import EventService
 from booking_api.utils.authentication import security, check_authorization
 from db.utils.postgres import get_db
@@ -30,7 +30,6 @@ async def create_event(
     - **notes**: any additional information
     """
     user_id = check_authorization(token)
-    await EventService.validate_name(session, event.name)
     new_event = await EventService.create(session=session, data=event, user_id=user_id)
     return EventService.model_to_dict(new_event)
 
@@ -67,7 +66,7 @@ async def event_details(
 @router.put("/{event_id}", response_model=Event, summary="Edit the event")
 async def edit_event(
     event_id: uuid.UUID,
-    new_event: EventEdit,
+    new_event: EventInput,
     session: AsyncSession = Depends(get_db),
     token=Depends(security),
 ):
@@ -85,20 +84,6 @@ async def edit_event(
     user_id = check_authorization(token)
     event = await EventService.edit(
         session=session, new_data=new_event, _id=event_id, user_id=user_id
-    )
-    return EventService.model_to_dict(event)
-
-
-@router.put("/{event_id}/rename", response_model=Event, summary="Rename the event")
-async def rename_event(
-    event_id: uuid.UUID,
-    new_name: str,
-    session: AsyncSession = Depends(get_db),
-    token=Depends(security),
-):
-    user_id = check_authorization(token)
-    event = await EventService.rename(
-        session=session, new_name=new_name, _id=event_id, user_id=user_id
     )
     return EventService.model_to_dict(event)
 

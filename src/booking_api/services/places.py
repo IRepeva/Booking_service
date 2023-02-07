@@ -6,7 +6,7 @@ from typing import Optional
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from booking_api.models.schemas import PlaceEdit, PlaceInput
+from booking_api.models.schemas import PlaceEdit, PlaceInput, Place
 from booking_api.services.base import BaseService
 from db.tables import Location
 from db.utils.postgres import Base
@@ -39,6 +39,16 @@ class PlaceService(BaseService):
         db_place.open = new_data.open
         db_place.close = new_data.close
         return await cls.save(session, db_place)
+
+    @classmethod
+    async def rename(
+        cls, session: AsyncSession, new_name: str, _id: uuid.UUID, user_id: uuid.UUID
+    ) -> Optional[Place]:
+        db_instance = await cls.validate_host(session, _id, user_id)
+        await cls.validate_name(session, new_name)
+
+        db_instance.name = new_name
+        return await cls.save(session, db_instance)
 
     @classmethod
     def validate(cls, data: PlaceInput | PlaceEdit):

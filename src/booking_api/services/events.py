@@ -10,7 +10,7 @@ from sqlalchemy import Date, Interval, String, cast
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
-from booking_api.models.schemas import EventEdit, EventInput
+from booking_api.models.schemas import EventInput
 from booking_api.services.base import BaseService
 from booking_api.services.places import PlaceService
 from config.base import settings
@@ -52,13 +52,14 @@ class EventService(BaseService):
     async def edit(
         cls,
         session: AsyncSession,
-        new_data: EventEdit,
+        new_data: EventInput,
         _id: uuid.UUID,
         user_id: uuid.UUID,
     ) -> Optional[Event]:
         db_event = await cls.validate_host(session, _id, user_id)
         await cls.validate(session, new_data, user_id, _id)
 
+        db_event.name = new_data.name
         db_event.start = new_data.start
         db_event.duration = new_data.duration
         db_event.location_id = new_data.location_id
@@ -72,7 +73,7 @@ class EventService(BaseService):
     async def validate(
         cls,
         session: AsyncSession,
-        data: EventInput | EventEdit,
+        data: EventInput | EventInput,
         user_id: uuid.UUID,
         _id: uuid.UUID | None = None,
     ):
