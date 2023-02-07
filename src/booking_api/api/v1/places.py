@@ -7,13 +7,13 @@ from starlette.responses import JSONResponse
 
 from booking_api.models.schemas import Place, PlaceEdit, PlaceInput
 from booking_api.services.places import PlaceService
-from booking_api.utils.authentication import get_token_payload, security
+from booking_api.utils.authentication import security, check_authorization
 from db.utils.postgres import get_db
 
 router = APIRouter(prefix="/places")
 
 
-@router.post("/add", response_model=Place, summary="Add event's location")
+@router.post("/", response_model=Place, summary="Add event's location")
 async def add_place(
     place: PlaceInput, session: AsyncSession = Depends(get_db), token=Depends(security)
 ) -> Place:
@@ -26,10 +26,7 @@ async def add_place(
     - **close**: close hour
     - **capacity**: maximum capacity of the place
     """
-    token_payload = get_token_payload(token.credentials)
-    user_id = token_payload.get("user_id")
-    if not user_id:
-        raise HTTPException(status_code=HTTPStatus.UNAUTHORIZED)
+    user_id = check_authorization(token)
 
     await PlaceService.validate_name(session, name=place.name)
     new_place = await PlaceService.create(session=session, data=place, user_id=user_id)
@@ -65,7 +62,7 @@ async def place_details(
     return PlaceService.model_to_dict(place)
 
 
-@router.put("/{place_id}/edit", response_model=Place, summary="Edit the place")
+@router.put("/{place_id}", response_model=Place, summary="Edit the place")
 async def edit_place(
     place_id: uuid.UUID,
     new_place: PlaceEdit,
@@ -80,10 +77,7 @@ async def edit_place(
     - **close**: close hour
     - **capacity**: maximum capacity of the place
     """
-    token_payload = get_token_payload(token.credentials)
-    user_id = token_payload.get("user_id")
-    if not user_id:
-        raise HTTPException(status_code=HTTPStatus.UNAUTHORIZED)
+    user_id = check_authorization(token)
 
     place = await PlaceService.edit(
         session=session, new_data=new_place, _id=place_id, user_id=user_id
@@ -98,10 +92,7 @@ async def rename_place(
     session: AsyncSession = Depends(get_db),
     token=Depends(security),
 ) -> Place:
-    token_payload = get_token_payload(token.credentials)
-    user_id = token_payload.get("user_id")
-    if not user_id:
-        raise HTTPException(status_code=HTTPStatus.UNAUTHORIZED)
+    user_id = check_authorization(token)
 
     place = await PlaceService.rename(
         session=session, new_name=new_name, _id=place_id, user_id=user_id
@@ -109,16 +100,13 @@ async def rename_place(
     return PlaceService.model_to_dict(place)
 
 
-@router.delete("/{place_id}/delete", summary="Delete place")
+@router.delete("/{place_id}", summary="Delete place")
 async def delete_place(
     place_id: uuid.UUID,
     session: AsyncSession = Depends(get_db),
     token=Depends(security),
 ) -> JSONResponse:
-    token_payload = get_token_payload(token.credentials)
-    user_id = token_payload.get("user_id")
-    if not user_id:
-        raise HTTPException(status_code=HTTPStatus.UNAUTHORIZED)
+    user_id = check_authorization(token)
 
     await PlaceService.delete(session=session, _id=place_id, user_id=user_id)
     return JSONResponse(

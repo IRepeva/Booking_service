@@ -4,17 +4,14 @@ from datetime import datetime, time
 from booking_api.models.mixin import MixinModel
 
 
-class EventEdit(MixinModel):
+class EventInput(MixinModel):
+    name: str
     location_id: uuid.UUID
     start: datetime
     duration: int
     movie_id: uuid.UUID
     notes: str | None
     participants: int
-
-
-class EventInput(EventEdit):
-    name: str
 
 
 class Event(EventInput):
