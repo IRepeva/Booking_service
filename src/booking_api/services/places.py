@@ -50,7 +50,7 @@ class PlaceService(BaseService):
         if capacity <= 0:
             raise HTTPException(
                 status_code=HTTPStatus.BAD_REQUEST,
-                detail=f"Capacity of the place can't be {capacity}, " f"should be > 0",
+                detail=f"Capacity of the place can't be {capacity}, should be > 0",
             )
 
     @classmethod
