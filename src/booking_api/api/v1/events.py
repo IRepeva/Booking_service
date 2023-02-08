@@ -8,7 +8,7 @@ from starlette.responses import JSONResponse
 from booking_api.models.schemas import Event, EventInput
 from booking_api.services.booking import BookingService
 from booking_api.services.events import EventService
-from booking_api.utils.authentication import security, check_authorization, get_token_payload
+from booking_api.utils.authentication import security, check_authorization
 from db.utils.postgres import get_db
 
 router = APIRouter(prefix="/events", tags=["events"])
@@ -124,8 +124,7 @@ async def get_events(
     """
     Get all events for which bookings are available
     """
-    token_payload = get_token_payload(token.credentials)
-    user_id = token_payload.get('user_id')
+    user_id = check_authorization(token)
     if not user_id:
         raise HTTPException(status_code=HTTPStatus.UNAUTHORIZED)
     events = await BookingService(session).get_events()

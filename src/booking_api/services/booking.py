@@ -10,8 +10,8 @@ from sqlalchemy.future import select
 from booking_api.models.booking import EventShemaList, SeatSchema, BookingInput, BookingSchema, \
     BookingInfoSchema
 from booking_api.services.service_mixin import ServiceMixin
-from db.tables.booking import BookingObject, BookingStatus
-from db.tables import Seat, Host
+from db.tables.booking import BookingObject
+from db.tables import Seat
 from db.tables import PurchasedMovie
 from db.tables import Location
 from db.tables import Event
@@ -229,7 +229,7 @@ class BookingService(ServiceMixin):
         await self.session.commit()
         return {"msg": 'booking was deleted'}
 
-    async def update_booking_status(self, booking_id: int, user_id: int, new_status: str) -> dict:
+    async def update_booking_status(self, booking_id: str, new_status: int) -> dict:
         booking = await self.session.execute(
             select(BookingObject.id, BookingObject.guest_id, BookingObject.status)
                 .where(

@@ -1,17 +1,17 @@
 from http import HTTPStatus
 
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from booking_api.models.booking import BookingInput
 from booking_api.services.booking import BookingService
-from booking_api.utils.authentication import security, get_token_payload
+from booking_api.utils.authentication import security, check_authorization
 from db.utils.postgres import get_db
 
-router = APIRouter(tags=["bookings"])
+router = APIRouter(prefix="bookings", tags=["bookings"])
 
 
-@router.post('/booking', summary='Create booking')
+@router.post('/', summary='Create booking')
 async def create_booking(
         booking: BookingInput,
         session: AsyncSession = Depends(get_db),
@@ -20,8 +20,7 @@ async def create_booking(
     """
     Create Booking
     """
-    token_payload = get_token_payload(token.credentials)
-    user_id = token_payload.get('user_id')
+    user_id = check_authorization(token)
     if not user_id:
         raise HTTPException(status_code=HTTPStatus.UNAUTHORIZED)
 
@@ -31,7 +30,7 @@ async def create_booking(
     return new_booking
 
 
-@router.get('/booking/{booking_id}', summary='Get booking')
+@router.get('/{booking_id}', summary='Get booking')
 async def get_booking(
         booking_id: str,
         session: AsyncSession = Depends(get_db),
@@ -40,8 +39,7 @@ async def get_booking(
     """
     Get booking
     """
-    token_payload = get_token_payload(token.credentials)
-    user_id = token_payload.get('user_id')
+    user_id = check_authorization(token)
     if not user_id:
         raise HTTPException(status_code=HTTPStatus.UNAUTHORIZED)
 
@@ -51,7 +49,7 @@ async def get_booking(
     return events
 
 
-@router.get('/booking/', summary='Get all user bookings')
+@router.get('/', summary='Get all user bookings')
 async def get_bookings(
         session: AsyncSession = Depends(get_db),
         token=Depends(security),
@@ -59,8 +57,7 @@ async def get_bookings(
     """
     Get all user bookings
     """
-    token_payload = get_token_payload(token.credentials)
-    user_id = token_payload.get('user_id')
+    user_id = check_authorization(token)
     if not user_id:
         raise HTTPException(status_code=HTTPStatus.UNAUTHORIZED)
 
@@ -70,7 +67,7 @@ async def get_bookings(
     return bookings
 
 
-@router.delete('/booking/{booking_id}', summary='Get event')
+@router.delete('/{booking_id}', summary='Get event')
 async def delete_booking(
         booking_id: str,
         session: AsyncSession = Depends(get_db),
@@ -79,8 +76,7 @@ async def delete_booking(
     """
     Get all events for which you can book a seat
     """
-    token_payload = get_token_payload(token.credentials)
-    user_id = token_payload.get('user_id')
+    user_id = check_authorization(token)
     if not user_id:
         raise HTTPException(status_code=HTTPStatus.UNAUTHORIZED)
 
@@ -91,7 +87,7 @@ async def delete_booking(
     return events
 
 
-@router.put('/booking/{booking_id}/edit', summary='Update booking status')
+@router.put('/{booking_id}/edit', summary='Update booking status')
 async def update_booking(
         booking_id: str,
         status: int,
@@ -101,14 +97,12 @@ async def update_booking(
     """
     Update Booking
     """
-    token_payload = get_token_payload(token.credentials)
-    user_id = token_payload.get('user_id')
+    user_id = check_authorization(token)
     if not user_id:
         raise HTTPException(status_code=HTTPStatus.UNAUTHORIZED)
 
     bookings = await BookingService(session).update_booking_status(
-        new_status=status,
         booking_id=booking_id,
-        user_id=user_id
+        new_status=status,
     )
     return bookings
