@@ -10,9 +10,9 @@ logging_config.dictConfig(LOGGING)
 
 
 class PostgresConfig(BaseSettings):
-    user: str = Field(default="admin")
-    password: str = Field(default="admin")
-    db: str = Field(default="booking")
+    user: str = Field(default="mov")
+    password: str = Field(default="mov")
+    db: str = Field(default="mov")
     host: str = Field(default="localhost")
     port: int = Field(default=5432)
 
@@ -43,4 +43,6 @@ def get_settings() -> Settings:
     return Settings()
 
 
+
 settings: Settings = get_settings()
+print(settings)
