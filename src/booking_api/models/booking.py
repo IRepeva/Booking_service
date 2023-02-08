@@ -29,6 +29,9 @@ class BookingSchema(MixinModel):
     status: int
     price: float
 
+    class Config:
+        orm_mode = True
+
 
 class BookingInfoSchema(MixinModel):
     id: uuid.UUID | str

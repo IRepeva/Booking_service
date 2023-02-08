@@ -21,7 +21,7 @@ class BookingService(ServiceMixin):
 
     async def get_events(self) -> list[EventShemaList]:
         query_seats = (
-            select(BookingObject.seat_id).filter(BookingObject.event_id == Event.id)#.subquery()
+            select(BookingObject.seat_id).filter(BookingObject.event_id == Event.id)
         )
 
         query = (select(
@@ -30,15 +30,15 @@ class BookingService(ServiceMixin):
             Seat.id.label('seat_id'), Seat.row, Seat.seat, Seat.type
         )
                  .select_from(Event)
-                 .outerjoin(
+                 .join(
             PurchasedMovie,
             Event.movie_id == PurchasedMovie.movie_id,
         )
-                 .outerjoin(
+                 .join(
             Seat,
             Seat.location_id == Event.location_id,
         )
-                 .outerjoin(
+                 .join(
             Location,
             Location.id == Event.location_id,
         )
@@ -85,23 +85,18 @@ class BookingService(ServiceMixin):
                 Seat.id.label('seat_id'), Seat.row, Seat.seat, Seat.type
             )
                 .select_from(Event)
-                .outerjoin(
+                .join(
                 PurchasedMovie,
                 Event.movie_id == PurchasedMovie.movie_id,
             )
-                .outerjoin(
+                .join(
                 Seat,
                 Seat.location_id == Event.location_id,
             )
-                .outerjoin(
+                .join(
                 Location,
                 Location.id == Event.location_id,
             )
-                .outerjoin(
-                Host,
-                Host.id == Event.host_id,
-            )
-
                 .where(
                 Event.start > datetime.now(),
                 Event.id == event_id
@@ -157,13 +152,7 @@ class BookingService(ServiceMixin):
                 status_code=HTTPStatus.CONFLICT,
                 detail="This booking already exists"
             )
-        return BookingSchema(
-            id=booking.id,
-            seat_id=booking.seat_id,
-            event_id=booking.event_id,
-            guest_id=booking.guest_id,
-            status=booking.status,
-            price=booking.price)
+        return BookingSchema.from_orm(booking)
 
     async def get_booking(self, booking_id) -> BookingInfoSchema:
         query = (
@@ -206,11 +195,11 @@ class BookingService(ServiceMixin):
                 Seat.type.label('seat_type')
             )
                 .select_from(BookingObject)
-                .outerjoin(
+                .join(
                 Event,
                 Event.id == BookingObject.event_id,
             )
-                .outerjoin(
+                .join(
                 Seat,
                 Seat.id == BookingObject.seat_id,
             )

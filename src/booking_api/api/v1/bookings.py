@@ -11,7 +11,7 @@ from db.utils.postgres import get_db
 router = APIRouter(tags=["bookings"])
 
 
-@router.post('/create_booking', summary='Createbooking')
+@router.post('/booking', summary='Create booking')
 async def create_booking(
         booking: BookingInput,
         session: AsyncSession = Depends(get_db),
