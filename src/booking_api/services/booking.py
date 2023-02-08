@@ -42,10 +42,6 @@ class BookingService(ServiceMixin):
             Location,
             Location.id == Event.location_id,
         )
-                 .outerjoin(
-            Host,
-            Host.id == Event.host_id,
-        )
                  .where(
             Event.start > datetime.now(),
             ~Seat.id.in_(query_seats)
@@ -71,13 +67,11 @@ class BookingService(ServiceMixin):
                         type=result.type,
                     )]
             ).dict()
-            found = False
             for event in results:
                 if event['id'] == event_id:
                     event['seats'].extend(event_dict['seats'])
-                    found = True
                     break
-            if not found:
+            else:
                 event_dict['seats'] = event_dict['seats']
                 results.append(event_dict)
 
@@ -142,7 +136,7 @@ class BookingService(ServiceMixin):
 
         return results.get(event_id)
 
-    async def create(self, data: BookingInput, user_id: str) -> BookingSchema:
+    async def create(self, data: BookingInput, user_id: uuid) -> BookingSchema:
         event = await self.get_event(data.event_id)
         if not event:
             raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="Event not found")
@@ -154,7 +148,7 @@ class BookingService(ServiceMixin):
                 seat_id=data.seat_id,
                 event_id=data.event_id,
                 guest_id=user_id,
-                status=BookingStatus.RESERVED,
+                status=1,
             )
             self.session.add(booking)
             await self.session.commit()
@@ -198,20 +192,7 @@ class BookingService(ServiceMixin):
 
         booking = await self.session.execute(query)
         booking = booking.first()
-        return BookingInfoSchema(
-            id=booking.id,
-            seat_id=booking.seat_id,
-            seat_row=booking.seat_row,
-            seat_seat=booking.seat_seat,
-            seat_type=booking.seat_type,
-            event_id=booking.event_id,
-            event_name=booking.event_name,
-            event_start=booking.event_start,
-            event_duration=booking.event_duration,
-            guest_id=booking.guest_id,
-            status=booking.status,
-            price=booking.price
-        )
+        return BookingInfoSchema.from_orm(booking)
 
     async def get_bookings(self, user_id) -> list[BookingInfoSchema]:
         query = (
@@ -239,20 +220,7 @@ class BookingService(ServiceMixin):
 
         bookings = await self.session.execute(query)
         bookings = bookings.all()
-        return [BookingInfoSchema(
-            id=booking.id,
-            seat_id=booking.seat_id,
-            seat_row=booking.seat_row,
-            seat_seat=booking.seat_seat,
-            seat_type=booking.seat_type,
-            event_id=booking.event_id,
-            event_name=booking.event_name,
-            event_start=booking.event_start,
-            event_duration=booking.event_duration,
-            guest_id=booking.guest_id,
-            status=booking.status,
-            price=booking.price
-        ) for booking in bookings]
+        return [BookingInfoSchema.from_orm(booking) for booking in bookings]
 
     async def delete_booking(self, booking_id, user_id) -> dict:
         booking = await self.session.execute(

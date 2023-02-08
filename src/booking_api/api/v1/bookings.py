@@ -8,7 +8,7 @@ from booking_api.services.booking import BookingService
 from booking_api.utils.authentication import security, get_token_payload
 from db.utils.postgres import get_db
 
-router = APIRouter()
+router = APIRouter(tags=["bookings"])
 
 
 @router.post('/create_booking', summary='Createbooking')

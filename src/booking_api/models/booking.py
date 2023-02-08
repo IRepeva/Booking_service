@@ -1,18 +1,11 @@
 import uuid
-import enum
 from datetime import datetime
-from pydantic import BaseModel
 
-from db.tables import SeatType
-
-
-class BookingStatus(enum.Enum):
-    EMPTY = 0
-    RESERVED = 1
-    BOOKED = 2
+from booking_api.models.mixin import MixinModel
+from db.tables import SeatType, BookingStatus
 
 
-class EventSchema(BaseModel):
+class EventSchema(MixinModel):
     id: uuid.UUID | str
     name: str
     start: datetime
@@ -23,21 +16,21 @@ class EventSchema(BaseModel):
     participants: int
 
 
-class BookingInput(BaseModel):
+class BookingInput(MixinModel):
     event_id: uuid.UUID | str
     seat_id: uuid.UUID | str
 
 
-class BookingSchema(BaseModel):
+class BookingSchema(MixinModel):
     id: uuid.UUID | str
     seat_id: uuid.UUID | str
     event_id: uuid.UUID | str
     guest_id: uuid.UUID | str
-    status: BookingStatus
+    status: int
     price: float
 
 
-class BookingInfoSchema(BaseModel):
+class BookingInfoSchema(MixinModel):
     id: uuid.UUID | str
     seat_id: uuid.UUID | str
     seat_row: int
@@ -51,15 +44,18 @@ class BookingInfoSchema(BaseModel):
     status: BookingStatus
     price: float
 
+    class Config:
+        orm_mode = True
 
-class SeatSchema(BaseModel):
+
+class SeatSchema(MixinModel):
     seat_id: uuid.UUID | str
     row: int
     seat: int
     type: SeatType
 
 
-class EventShemaList(BaseModel):
+class EventShemaList(MixinModel):
     id: uuid.UUID | str
     name: str
     start: datetime

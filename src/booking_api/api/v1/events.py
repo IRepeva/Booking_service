@@ -11,7 +11,7 @@ from booking_api.services.events import EventService
 from booking_api.utils.authentication import security, check_authorization, get_token_payload
 from db.utils.postgres import get_db
 
-router = APIRouter(prefix="/events")
+router = APIRouter(prefix="/events", tags=["events"])
 
 
 @router.post("/", response_model=Event, summary="Create event")
@@ -116,7 +116,7 @@ async def delete_event(
 
 
 
-@router.get('/event', summary='Get all events')
+@router.get('/', summary='Get all events')
 async def get_events(
         session: AsyncSession = Depends(get_db),
         token=Depends(security),
