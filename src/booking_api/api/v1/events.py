@@ -15,13 +15,15 @@ router = APIRouter(prefix="/events")
 
 @router.post("/", response_model=Event, summary="Create event")
 async def create_event(
-    event: EventInput, session: AsyncSession = Depends(get_db), token=Depends(security)
+        event: EventInput,
+        session: AsyncSession = Depends(get_db),
+        token=Depends(security)
 ) -> Event:
     """
     Create event with the following data:
 
     - **name**: each event has a unique name
-    - **place_id**: event's location
+    - **location_id**: event's location
     - **start**: event's start datetime
     - **duration**: event's duration
     - **host_id**: event's organizer
@@ -30,22 +32,25 @@ async def create_event(
     - **notes**: any additional information
     """
     user_id = check_authorization(token)
-    new_event = await EventService.create(session=session, data=event, user_id=user_id)
+    new_event = await EventService.create(session=session,
+                                          data=event,
+                                          user_id=user_id)
     return EventService.model_to_dict(new_event)
 
 
 @router.get(
-    "/{event_id}", response_model=Event, summary="Get detailed information about event"
+    "/{event_id}", response_model=Event,
+    summary="Get detailed information about event"
 )
 async def event_details(
-    event_id: uuid.UUID, session: AsyncSession = Depends(get_db)
+        event_id: uuid.UUID, session: AsyncSession = Depends(get_db)
 ) -> Event:
     """
     Get all event information:
 
     - **id**: each event has a unique id
     - **name**: each event has a unique name
-    - **place_id**: event's location
+    - **location_id**: event's location
     - **start**: event's start datetime
     - **duration**: event's duration
     - **host_id**: event's organizer
@@ -65,15 +70,15 @@ async def event_details(
 
 @router.put("/{event_id}", response_model=Event, summary="Edit the event")
 async def edit_event(
-    event_id: uuid.UUID,
-    new_event: EventInput,
-    session: AsyncSession = Depends(get_db),
-    token=Depends(security),
+        event_id: uuid.UUID,
+        new_event: EventInput,
+        session: AsyncSession = Depends(get_db),
+        token=Depends(security),
 ):
     """
     Change the event:
 
-    - **place_id**: event's location
+    - **location_id**: event's location
     - **start**: event's start datetime
     - **duration**: event's duration
     - **host_id**: event's organizer
@@ -90,12 +95,14 @@ async def edit_event(
 
 @router.delete("/{event_id}", summary="Delete event")
 async def delete_event(
-    event_id: uuid.UUID,
-    session: AsyncSession = Depends(get_db),
-    token=Depends(security),
+        event_id: uuid.UUID,
+        session: AsyncSession = Depends(get_db),
+        token=Depends(security),
 ) -> JSONResponse:
     user_id = check_authorization(token)
-    event = await EventService.delete(session=session, _id=event_id, user_id=user_id)
+    event = await EventService.delete(session=session,
+                                      _id=event_id,
+                                      user_id=user_id)
     if not event:
         raise HTTPException(
             status_code=HTTPStatus.NOT_FOUND,

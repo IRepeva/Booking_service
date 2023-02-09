@@ -1,4 +1,4 @@
 #!/bin/bash
 echo "Waiting over"
-sleep 15
+sleep 5
 exec "$@"

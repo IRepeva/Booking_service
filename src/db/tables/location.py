@@ -18,5 +18,5 @@ class Location(SimplePrimaryKey, TimeStampMixin, Base):
         "host_id", UUID(as_uuid=True), ForeignKey("host.id", ondelete="CASCADE")
     )
 
-    seats = relationship("Seat", back_populates="location", uselist=True)
+    seats = relationship("Seat", back_populates="location", uselist=True, lazy='selectin')
     events = relationship("Event", back_populates="location", uselist=True)
