@@ -9,11 +9,9 @@ done
 
 echo "db launched"
 
-echo "trying to connect to elastic"
-
 # Apply database migrations
 echo "Apply database migrations"
 cd db/migrator && alembic upgrade head
-cd .. && cd ..
+cd ../..
 
 exec "$@"

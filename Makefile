@@ -1,11 +1,5 @@
-local-start:
-	docker-compose --env-file=.env.example up -d
-
-start:
+start-service:
 	docker-compose up -d
-
-local-stop:
-	docker-compose --env-file=.env.example down
 
 stop:
 	docker-compose down
@@ -15,3 +9,6 @@ migration-upgrade:
 
 migration-downgrade:
 	cd src/db/migrator && alembic downgrade -1
+
+start:
+	make local-start && make migration-upgrade
