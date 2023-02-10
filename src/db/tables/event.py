@@ -16,11 +16,7 @@ class Event(SimplePrimaryKey, TimeStampMixin, Base):
     notes = Column(String, comment="Extra information")
     participants = Column(Integer, comment="Number of participants", nullable=False)
 
-    movie_id = Column(
-        "movie_id",
-        UUID(as_uuid=True),
-        ForeignKey("purchased_movie.movie_id", ondelete="CASCADE"),
-    )
+    movie_id = Column("movie_id", UUID(as_uuid=True), nullable=False)
     location_id = Column(
         "location_id", UUID(as_uuid=True), ForeignKey("location.id", ondelete="CASCADE")
     )

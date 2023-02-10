@@ -111,14 +111,11 @@ def upgrade() -> None:
             nullable=False,
             comment="Number of participants",
         ),
-        sa.Column("movie_id", postgresql.UUID(as_uuid=True), nullable=True),
+        sa.Column("movie_id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("location_id", postgresql.UUID(as_uuid=True), nullable=True),
         sa.Column("host_id", postgresql.UUID(as_uuid=True), nullable=True),
         sa.ForeignKeyConstraint(["host_id"], ["host.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["location_id"], ["location.id"], ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(
-            ["movie_id"], ["purchased_movie.movie_id"], ondelete="CASCADE"
-        ),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_table(
