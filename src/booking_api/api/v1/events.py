@@ -6,11 +6,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import JSONResponse
 
 from booking_api.models.schemas import Event, EventInput
+from booking_api.services.booking import BookingService
 from booking_api.services.events import EventService
 from booking_api.utils.authentication import security, check_authorization
 from db.utils.postgres import get_db
 
-router = APIRouter(prefix="/events")
+router = APIRouter(prefix="/events", tags=["events"])
 
 
 @router.post("/", response_model=Event, summary="Create event")
@@ -112,3 +113,19 @@ async def delete_event(
         status_code=200,
         content={"message": f"Event {event_id} was successfully deleted"},
     )
+
+
+
+@router.get('/', summary='Get all events')
+async def get_events(
+        session: AsyncSession = Depends(get_db),
+        token=Depends(security),
+):
+    """
+    Get all events for which bookings are available
+    """
+    user_id = check_authorization(token)
+    if not user_id:
+        raise HTTPException(status_code=HTTPStatus.UNAUTHORIZED)
+    events = await BookingService(session).get_events()
+    return events

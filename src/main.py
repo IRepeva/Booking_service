@@ -27,7 +27,7 @@ async def shutdown():
     await redis.redis.close()
 
 
-app.include_router(booking_router.router, prefix="/booking_api", tags=["booking"])
+app.include_router(booking_router.router, prefix="/booking_api")
 
 
 if __name__ == "__main__":

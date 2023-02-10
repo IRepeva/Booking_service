@@ -17,6 +17,11 @@ Booking = Table(
     "booking",
     Base.metadata,
     Column(
+        "id",
+        UUID(as_uuid=True),
+        primary_key=True
+    ),
+    Column(
         "seat_id",
         UUID(as_uuid=True),
         ForeignKey("seat.id", ondelete="CASCADE"),
@@ -46,3 +51,7 @@ Booking = Table(
     Column("modified", DateTime, default=sql.func.now(), onupdate=sql.func.now()),
     Column("created", DateTime, default=sql.func.now()),
 )
+
+
+class BookingObject(Base):
+    __table__ = Booking
