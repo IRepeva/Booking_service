@@ -20,7 +20,7 @@ venv\Scripts\activate
 pip3 -r deploy/requirements.txt 
 ```
 
-4. Поднимите контейнеры с сопутствующими контейнерами с помощью Makefile
+4. Поднимите контейнеры с помощью Makefile
 ```bash
 make local-start
 ```

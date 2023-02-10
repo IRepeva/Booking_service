@@ -11,4 +11,4 @@ migration-downgrade:
 	cd src/db/migrator && alembic downgrade -1
 
 start:
-	make local-start && make migration-upgrade
+	make start-service && make migration-upgrade
