@@ -1,7 +1,7 @@
 import uuid
 from abc import abstractmethod
 from http import HTTPStatus
-from typing import Optional
+from typing import Optional, Iterable
 
 from fastapi import HTTPException
 from pydantic import BaseModel
@@ -66,7 +66,7 @@ class BaseService:
 
     @classmethod
     async def get_first(cls, session: AsyncSession, model: Base = None,
-                        filters: list | tuple = ()):
+                        filters: Iterable = ()):
         if model is None:
             model = cls.model
 
@@ -79,7 +79,7 @@ class BaseService:
     @classmethod
     async def get_all(
             cls, session: AsyncSession, model: Base = None,
-            filters: list | tuple = ()
+            filters: Iterable = ()
     ):
         if model is None:
             model = cls.model

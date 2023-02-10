@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timedelta
 from http import HTTPStatus
-from typing import Optional
+from typing import Optional, Iterable
 
 import requests
 from fastapi import HTTPException
@@ -116,15 +116,12 @@ class EventService(BaseService):
                 detail="Event can't be organized in the past",
             )
 
-        if (
-                event_start.time() > location.close
-                or event_start.time() < location.open
-                or event_finish.time() > location.close
-        ):
+        if not location.close >= event_finish.time() > event_start.time() >= location.open:
             raise HTTPException(
                 status_code=HTTPStatus.BAD_REQUEST,
                 detail=f"Event can be organized only at working hours: "
-                       f"between {location.open} and {location.close} for {location.id}",
+                       f"between {location.open} and {location.close} "
+                       f"for {location.id}",
             )
 
         filters = (
@@ -191,7 +188,7 @@ class EventService(BaseService):
 
     @classmethod
     async def get_purchased_movies(
-            cls, session: AsyncSession, filters: list | tuple = ()
+            cls, session: AsyncSession, filters: Iterable = ()
     ):
         stmt = (
             select(PurchasedMovie)

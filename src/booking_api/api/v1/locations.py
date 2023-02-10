@@ -10,6 +10,7 @@ from booking_api.models.schemas import (
 )
 from booking_api.services.locations import LocationService
 from booking_api.utils.authentication import security, check_authorization
+from db.tables import Seat
 from db.utils.postgres import get_db
 
 router = APIRouter(prefix="/locations")
@@ -20,7 +21,7 @@ async def add_location(
         location: LocationInput,
         session: AsyncSession = Depends(get_db),
         token=Depends(security),
-        seat_input: list[SeatInput] | None = None,
+        seats_input: list[SeatInput] | None = None,
 ) -> Location:
     """
     Create location with the following data:
@@ -37,15 +38,20 @@ async def add_location(
     new_location = await LocationService.create(
         session=session, data=location, user_id=user_id
     )
-    if seat_input:
-        for seat_data in seat_input:
-            await LocationService.create_seat(
-                session=session, data=seat_data, location_id=new_location.id
-            )
+    if seats_input:
+        seats_data = await LocationService.prepare_seats_data(seats_input,
+                                                              new_location.id)
     else:
-        await LocationService.create_default_seats(
-            session=session, location=new_location
-        )
+        seats_data = [
+            {
+                'id': uuid.uuid4(),
+                'location_id': new_location.id
+            } for _ in range(location.capacity)
+        ]
+
+    session.add_all([Seat(**seat) for seat in seats_data])
+    await session.commit()
+
     return LocationService.model_to_dict(new_location)
 
 

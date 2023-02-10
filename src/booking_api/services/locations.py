@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from booking_api.models.schemas import LocationEdit, LocationInput, SeatInput
 from booking_api.services.base import BaseService
-from db.tables import Location, Seat
+from db.tables import Location
 from db.utils.postgres import Base
 
 
@@ -27,25 +27,13 @@ class LocationService(BaseService):
         return await super().create(session, data, user_id, commit=False)
 
     @classmethod
-    async def create_seat(
-            cls, session: AsyncSession,
-            data: SeatInput,
-            location_id: uuid.UUID
+    async def prepare_seats_data(
+            cls, seats_data: list[SeatInput], location_id: uuid.UUID
     ):
-        data = data.dict() if data else {}
-        data.update({"location_id": location_id})
-
-        data.update({'id': uuid.uuid4()})
-        instance = Seat(**data)
-        await cls.save(session, instance)
-
-    @classmethod
-    async def create_default_seats(cls, session: AsyncSession, location: Location):
-        data = {'location_id': location.id}
-        for seat_id in [uuid.uuid4() for _ in range(location.capacity)]:
-            data.update({'id': seat_id})
-            instance = Seat(**data)
-            await cls.save(session, instance)
+        seats_data = [seat.dict() for seat in seats_data]
+        for seat in seats_data:
+            seat.update({'id': uuid.uuid4(), "location_id": location_id})
+        return seats_data
 
     @classmethod
     async def edit(
@@ -84,7 +72,8 @@ class LocationService(BaseService):
         if capacity <= 0:
             raise HTTPException(
                 status_code=HTTPStatus.BAD_REQUEST,
-                detail=f"Capacity of the location can't be {capacity}, should be > 0",
+                detail=f"Capacity of the location can't be {capacity}, "
+                       f"should be > 0",
             )
 
     @classmethod
