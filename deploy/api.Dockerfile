@@ -2,6 +2,8 @@ FROM python:3.10.4 as base
 
 ENV PYTHONUNBUFFERED 1
 
+RUN apt-get update && apt-get install -y netcat
+
 WORKDIR /booking_api
 
 EXPOSE 8000/tcp
