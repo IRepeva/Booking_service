@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from booking_api.models.schemas import LocationEdit, LocationInput, SeatInput
 from booking_api.services.base import BaseService
 from db.tables import Location
-from db.utils.postgres import Base
+from db.tables.base import Base
 
 
 class LocationService(BaseService):
@@ -18,21 +18,22 @@ class LocationService(BaseService):
 
     @classmethod
     async def create(
-            cls, session: AsyncSession,
-            data: LocationInput,
-            user_id: str | uuid.UUID,
-            model: Base = None,
+        cls,
+        session: AsyncSession,
+        data: LocationInput,
+        user_id: str | uuid.UUID,
+        model: Base = None,
     ) -> Location:
         cls.validate(data)
         return await super().create(session, data, user_id, commit=False)
 
     @classmethod
     async def prepare_seats_data(
-            cls, seats_data: list[SeatInput], location_id: uuid.UUID
+        cls, seats_data: list[SeatInput], location_id: uuid.UUID
     ):
         seats_data = [seat.dict() for seat in seats_data]
         for seat in seats_data:
-            seat.update({'id': uuid.uuid4(), "location_id": location_id})
+            seat.update({"id": uuid.uuid4(), "location_id": location_id})
         return seats_data
 
     @classmethod
@@ -73,7 +74,7 @@ class LocationService(BaseService):
             raise HTTPException(
                 status_code=HTTPStatus.BAD_REQUEST,
                 detail=f"Capacity of the location can't be {capacity}, "
-                       f"should be > 0",
+                f"should be > 0",
             )
 
     @classmethod
