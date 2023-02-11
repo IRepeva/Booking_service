@@ -34,6 +34,7 @@ class RedisSettings(BaseSettings):
 class Settings(BaseSettings):
     project_name = Field("tickets_booker", env="PROJECT_NAME")
     free_films_url = "http://127.0.0.1:8000/booking_api/v1/movies/free_movies"
+    minimum_time_interval = 1800
     postgres: PostgresConfig = PostgresConfig()
     redis: RedisSettings = RedisSettings()
 
@@ -41,7 +42,6 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
-
 
 
 settings: Settings = get_settings()

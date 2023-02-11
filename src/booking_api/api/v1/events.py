@@ -8,7 +8,7 @@ from starlette.responses import JSONResponse
 from booking_api.models.schemas import Event, EventInput
 from booking_api.services.booking import BookingService
 from booking_api.services.events import EventService
-from booking_api.utils.authentication import security, check_authorization
+from booking_api.utils.authentication import check_authorization, security
 from db.utils.postgres import get_db
 
 router = APIRouter(prefix="/events", tags=["events"])
@@ -16,9 +16,7 @@ router = APIRouter(prefix="/events", tags=["events"])
 
 @router.post("/", response_model=Event, summary="Create event")
 async def create_event(
-        event: EventInput,
-        session: AsyncSession = Depends(get_db),
-        token=Depends(security)
+    event: EventInput, session: AsyncSession = Depends(get_db), token=Depends(security)
 ) -> Event:
     """
     Create event with the following data:
@@ -33,18 +31,15 @@ async def create_event(
     - **notes**: any additional information
     """
     user_id = check_authorization(token)
-    new_event = await EventService.create(session=session,
-                                          data=event,
-                                          user_id=user_id)
+    new_event = await EventService.create(session=session, data=event, user_id=user_id)
     return EventService.model_to_dict(new_event)
 
 
 @router.get(
-    "/{event_id}", response_model=Event,
-    summary="Get detailed information about event"
+    "/{event_id}", response_model=Event, summary="Get detailed information about event"
 )
 async def event_details(
-        event_id: uuid.UUID, session: AsyncSession = Depends(get_db)
+    event_id: uuid.UUID, session: AsyncSession = Depends(get_db)
 ) -> Event:
     """
     Get all event information:
@@ -71,10 +66,10 @@ async def event_details(
 
 @router.put("/{event_id}", response_model=Event, summary="Edit the event")
 async def edit_event(
-        event_id: uuid.UUID,
-        new_event: EventInput,
-        session: AsyncSession = Depends(get_db),
-        token=Depends(security),
+    event_id: uuid.UUID,
+    new_event: EventInput,
+    session: AsyncSession = Depends(get_db),
+    token=Depends(security),
 ):
     """
     Change the event:
@@ -96,30 +91,27 @@ async def edit_event(
 
 @router.delete("/{event_id}", summary="Delete event")
 async def delete_event(
-        event_id: uuid.UUID,
-        session: AsyncSession = Depends(get_db),
-        token=Depends(security),
+    event_id: uuid.UUID,
+    session: AsyncSession = Depends(get_db),
+    token=Depends(security),
 ) -> JSONResponse:
     user_id = check_authorization(token)
-    event = await EventService.delete(session=session,
-                                      _id=event_id,
-                                      user_id=user_id)
+    event = await EventService.delete(session=session, _id=event_id, user_id=user_id)
     if not event:
         raise HTTPException(
             status_code=HTTPStatus.NOT_FOUND,
             detail=f"Event with id {event_id} is not found",
         )
     return JSONResponse(
-        status_code=200,
+        status_code=HTTPStatus.OK,
         content={"message": f"Event {event_id} was successfully deleted"},
     )
 
 
-
-@router.get('/', summary='Get all events')
+@router.get("/", summary="Get all events")
 async def get_events(
-        session: AsyncSession = Depends(get_db),
-        token=Depends(security),
+    session: AsyncSession = Depends(get_db),
+    token=Depends(security),
 ):
     """
     Get all events for which bookings are available

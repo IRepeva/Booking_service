@@ -6,6 +6,7 @@ from typing import Any
 import jwt
 from fastapi import HTTPException
 from fastapi.security import HTTPBearer
+from jwt.exceptions import DecodeError
 
 
 def get_token_payload(token: str) -> dict[str, Any]:
@@ -17,7 +18,7 @@ def get_token_payload(token: str) -> dict[str, Any]:
             algorithms=unverified_headers["alg"],
         )
 
-    except Exception as exc:
+    except DecodeError as exc:
         logging.error(f"Error JWT decode: {exc}")
         return {}
 

@@ -12,3 +12,6 @@ migration-downgrade:
 
 start:
 	make start-service && make migration-upgrade
+
+local-start:
+	docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d && make migration-upgrade

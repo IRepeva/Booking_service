@@ -1,9 +1,10 @@
-import aioredis
 import uvicorn as uvicorn
 from fastapi import FastAPI, Request
 from fastapi.responses import ORJSONResponse
 from starlette.responses import JSONResponse
 from http import HTTPStatus
+from redis.asyncio import ConnectionPool, Redis
+
 from booking_api.api import router as booking_router
 from booking_api.utils.exceptions import NotFoundException, UniqueConflictException, \
     ForbiddenException
@@ -21,8 +22,8 @@ app = FastAPI(
 
 @app.on_event("startup")
 async def startup():
-    pool = aioredis.ConnectionPool.from_url(settings.redis.url, max_connections=20)
-    redis.redis = aioredis.Redis(connection_pool=pool)
+    pool = ConnectionPool.from_url(settings.redis.url, max_connections=20)
+    redis.redis = Redis(connection_pool=pool)
 
 
 @app.on_event("shutdown")

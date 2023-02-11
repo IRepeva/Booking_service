@@ -1,7 +1,7 @@
 import uuid
 from abc import abstractmethod
 from http import HTTPStatus
-from typing import Optional, Iterable
+from typing import Iterable, Optional
 
 from fastapi import HTTPException
 from pydantic import BaseModel
@@ -10,7 +10,7 @@ from sqlalchemy.future import select
 
 from booking_api.models.schemas import Location
 from db.tables import Event
-from db.utils.postgres import Base
+from db.tables.base import Base
 
 
 class BaseService:
@@ -19,10 +19,11 @@ class BaseService:
 
     @classmethod
     async def create(
-            cls, session: AsyncSession,
-            data: BaseModel,
-            user_id: str | uuid.UUID,
-            commit=True
+        cls,
+        session: AsyncSession,
+        data: BaseModel,
+        user_id: str | uuid.UUID,
+        commit=True,
     ) -> Base:
         data = data.dict()
         data.update({"host_id": user_id})
@@ -33,17 +34,17 @@ class BaseService:
     @classmethod
     @abstractmethod
     async def edit(
-            cls,
-            session: AsyncSession,
-            new_data: BaseModel,
-            _id: uuid.UUID,
-            user_id: uuid.UUID,
+        cls,
+        session: AsyncSession,
+        new_data: BaseModel,
+        _id: uuid.UUID,
+        user_id: uuid.UUID,
     ) -> Optional[BaseModel]:
         ...
 
     @classmethod
     async def delete(
-            cls, session: AsyncSession, _id: uuid.UUID, user_id: uuid.UUID
+        cls, session: AsyncSession, _id: uuid.UUID, user_id: uuid.UUID
     ) -> Optional[Location]:
         db_instance = await cls.validate_host(session, _id, user_id)
 
@@ -53,7 +54,7 @@ class BaseService:
 
     @classmethod
     async def get_by_id(
-            cls, session: AsyncSession, _id: str | uuid.UUID, model: Base = None
+        cls, session: AsyncSession, _id: str | uuid.UUID, model: Base = None
     ):
         if not model:
             model = cls.model
@@ -65,30 +66,22 @@ class BaseService:
         )
 
     @classmethod
-    async def get_first(cls, session: AsyncSession, model: Base = None,
-                        filters: Iterable = ()):
-        if model is None:
-            model = cls.model
-
-        return (
-            (await session.execute(select(model).where(*filters)))
-            .scalars()
-            .first()
-        )
-
-    @classmethod
-    async def get_all(
-            cls, session: AsyncSession, model: Base = None,
-            filters: Iterable = ()
+    async def get_first(
+        cls, session: AsyncSession, model: Base = None, filters: Iterable = ()
     ):
         if model is None:
             model = cls.model
 
-        return (
-            (await session.execute(select(model).where(*filters)))
-            .scalars()
-            .all()
-        )
+        return (await session.execute(select(model).where(*filters))).scalars().first()
+
+    @classmethod
+    async def get_all(
+        cls, session: AsyncSession, model: Base = None, filters: Iterable = ()
+    ):
+        if model is None:
+            model = cls.model
+
+        return (await session.execute(select(model).where(*filters))).scalars().all()
 
     @classmethod
     async def save(cls, session: AsyncSession, instance: Base, commit=True):
@@ -101,7 +94,7 @@ class BaseService:
 
     @classmethod
     async def validate_host(
-            cls, session: AsyncSession, _id: uuid.UUID, user_id: uuid.UUID
+        cls, session: AsyncSession, _id: uuid.UUID, user_id: uuid.UUID
     ):
         db_instance = await cls.get_by_id(session, _id)
         if not db_instance:
@@ -120,9 +113,7 @@ class BaseService:
 
     @classmethod
     async def validate_name(cls, session: AsyncSession, name: str):
-        db_instance = await cls.get_first(
-            session, filters=(Event.name == name,)
-        )
+        db_instance = await cls.get_first(session, filters=(Event.name == name,))
         if db_instance:
             raise HTTPException(
                 status_code=HTTPStatus.BAD_REQUEST,
