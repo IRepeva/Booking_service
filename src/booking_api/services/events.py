@@ -43,13 +43,8 @@ class EventService(BaseService):
         db_event = await cls.validate_host(session, _id, user_id)
         await cls.validate(session, new_data, user_id, _id)
 
-        db_event.name = new_data.name
-        db_event.start = new_data.start
-        db_event.duration = new_data.duration
-        db_event.location_id = new_data.location_id
-        db_event.movie_id = new_data.movie_id
-        db_event.notes = new_data.notes
-        db_event.participants = new_data.participants
+        for key, value in new_data.dict().items():
+            setattr(db_event, key, value)
 
         return await cls.save(session, db_event)
 

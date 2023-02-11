@@ -47,10 +47,8 @@ class LocationService(BaseService):
         db_location = await cls.validate_host(session, _id, user_id)
         cls.validate(new_data)
 
-        db_location.coordinates = new_data.coordinates
-        db_location.capacity = new_data.capacity
-        db_location.open = new_data.open
-        db_location.close = new_data.close
+        for key, value in new_data.dict().items():
+            setattr(db_location, key, value)
         return await cls.save(session, db_location)
 
     @classmethod
