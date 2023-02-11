@@ -57,6 +57,9 @@ class SeatSchema(MixinModel):
     seat: int
     type: SeatType
 
+    class Config:
+        orm_mode = True
+
 
 class EventShemaList(MixinModel):
     id: uuid.UUID | str
