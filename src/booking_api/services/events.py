@@ -16,8 +16,6 @@ from config.base import settings
 from db.tables import Event, Location, PurchasedMovie, PurchasedMovieHost
 from db.tables.base import Base
 
-MINIMUM_TIME_INTERVAL = 1800
-
 
 class EventService(BaseService):
     model: Base = Event
@@ -95,13 +93,13 @@ class EventService(BaseService):
         location: Location,
         _id: uuid.UUID | None = None,
     ):
-        if duration < MINIMUM_TIME_INTERVAL:
+        if duration < settings.minimum_time_interval:
             raise HTTPException(
                 status_code=HTTPStatus.BAD_REQUEST,
                 detail="The event should last at least 30 minutes",
             )
 
-        if duration % MINIMUM_TIME_INTERVAL != 0:
+        if duration % settings.minimum_time_interval != 0:
             raise HTTPException(
                 status_code=HTTPStatus.BAD_REQUEST,
                 detail="The event duration should be a multiple of 30 minutes",
