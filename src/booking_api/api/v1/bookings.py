@@ -1,7 +1,13 @@
+import uuid
+from http import HTTPStatus
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.responses import JSONResponse
 
-from booking_api.models.booking import BookingInput
+from booking_api.models.schemas import (
+    BookingInput, BookingSchema, BookingDetails
+)
 from booking_api.services.booking import BookingService
 from booking_api.utils.authentication import check_authorization, security
 from db.utils.postgres import get_db
@@ -9,83 +15,78 @@ from db.utils.postgres import get_db
 router = APIRouter(prefix="/bookings", tags=["bookings"])
 
 
-@router.post("/", summary="Create booking")
+@router.post("/", response_model=BookingSchema, summary="Create booking")
 async def create_booking(
-    booking: BookingInput,
-    session: AsyncSession = Depends(get_db),
-    token=Depends(security),
+        booking: BookingInput,
+        session: AsyncSession = Depends(get_db),
+        token=Depends(security),
 ):
-    """
-    Create Booking
-    """
     user_id = check_authorization(token)
-    new_booking = await BookingService(session).create(
-        data=booking, user_id=user_id
-    )
-    return new_booking
+    return await BookingService.create(session=session, data=booking,
+                                       user_id=user_id)
 
 
-@router.get("/{booking_id}", summary="Get booking")
+@router.get("/{booking_id}", response_model=BookingDetails,
+            summary="Get booking")
 async def get_booking(
-    booking_id: str,
-    session: AsyncSession = Depends(get_db),
-    token=Depends(security),
-):
-    """
-    Get booking
-    """
+        booking_id: uuid.UUID,
+        session: AsyncSession = Depends(get_db),
+        token=Depends(security),
+) -> BookingDetails:
     check_authorization(token)
-    events = await BookingService(session).get_booking(
-        booking_id=booking_id
-    )
-    return events
+    return await BookingService.get_booking(session, booking_id)
 
 
-@router.get("/", summary="Get all user bookings")
+@router.get("/", response_model=list[BookingDetails],
+            summary="Get all user bookings")
 async def get_bookings(
-    session: AsyncSession = Depends(get_db),
-    token=Depends(security),
-):
-    """
-    Get all user bookings
-    """
+        session: AsyncSession = Depends(get_db),
+        token=Depends(security),
+) -> list[BookingDetails]:
     user_id = check_authorization(token)
-    bookings = await BookingService(session).get_bookings(
-        user_id=user_id
-    )
-    return bookings
+    return await BookingService.get_bookings(session, user_id=user_id)
 
 
-@router.delete("/{booking_id}", summary="Get event")
+@router.delete("/{booking_id}", summary="Delete booking")
 async def delete_booking(
-    booking_id: str,
-    session: AsyncSession = Depends(get_db),
-    token=Depends(security),
+        booking_id: uuid.UUID,
+        session: AsyncSession = Depends(get_db),
+        token=Depends(security),
 ):
-    """
-    Get all events for which you can book a seat
-    """
     user_id = check_authorization(token)
-    events = await BookingService(session).delete_booking(
-        booking_id=booking_id, user_id=user_id
+    await BookingService.delete(session, _id=booking_id, user_id=user_id)
+
+    return JSONResponse(
+        status_code=HTTPStatus.OK,
+        content={"message": f"Booking {booking_id} was successfully deleted"},
     )
-    return events
 
 
-@router.put("/{booking_id}", summary="Update booking status")
-async def update_booking(
-    booking_id: str,
-    status: int,
-    session: AsyncSession = Depends(get_db),
-    token=Depends(security),
+@router.put("/update_status/{booking_id}", summary="Update booking status")
+async def update_booking_status(
+        booking_id: uuid.UUID,
+        status: int,
+        session: AsyncSession = Depends(get_db),
+        token=Depends(security),
 ):
-    """
-    Update Booking
-    """
     user_id = check_authorization(token)
-    bookings = await BookingService(session).update_booking_status(
+    return await BookingService.update_booking_status(
+        session=session,
         booking_id=booking_id,
         new_status=status,
         user_id=user_id
     )
-    return bookings
+
+
+@router.put("/{booking_id}", summary="Update booking")
+async def update_booking(
+        booking_id: uuid.UUID,
+        new_booking: BookingInput,
+        session: AsyncSession = Depends(get_db),
+        token=Depends(security),
+):
+    user_id = check_authorization(token)
+    booking = await BookingService.edit(
+        session=session, new_data=new_booking, _id=booking_id, user_id=user_id
+    )
+    return BookingSchema.from_orm(booking)

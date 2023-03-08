@@ -17,11 +17,13 @@ FREE_MOVIES = [
     UUID("1537dde8-daae-4e70-8150-093e7df157e9"),
 ]
 
-router = APIRouter(prefix="/movies")
+router = APIRouter(prefix="/movies", tags=["movies"])
 
 
 @router.get(
-    "/free_movies", response_model=List[uuid.UUID], summary="Get list of free movies"
+    "/free_movies",
+    response_model=List[uuid.UUID],
+    summary="Get list of free movies"
 )
 async def free_movies() -> List[uuid.UUID]:
     return FREE_MOVIES

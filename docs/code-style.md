@@ -1,29 +1,28 @@
-<h1>Соглашение по коду</h1>
-Для единообразия кода в проекте используется pre-commit, который включает в себя ряд анализаторов кода
+<h1>Code agreement</h1>
+To ensure code consistency in the project, we use pre-commit, which includes several code analyzers:
 
 - autopep8
 - black
 - isort
 - flake8, 
+as well as several checks, such as a ban on committing to the main branch, etc.
 
-а так же ряд проверок, как, например, запрет на коммит в основную ветку и тд.
+On every commit, the checks will be run, as well as code reformatting.
 
-При каждом коммите будут запускать проверки, а также реформатирование кода.
+<h3>Working specifics</h3>
+1. When formatting, the commit is not executed. Updated files are added to the git index, after which a commit needs to be made again.
+2. flake8 does not format files on its own, but only provides a report on inconsistencies. The inconsistencies need to be fixed manually.
 
-<h3>Особенности работы </h3>
-1. При форматировании, коммит не выполняется. Обновленные файлы попадают в индекс git, после чего необходимо сделать коммит еще раз
-2. flake8 не форматирует файлы самостоятельно, а лишь оставляет отчет о несоответствии. Несоответствия необходимо исправить самостоятельно 
-
-<h3>Установка pre-commit</h3>
-Для начала работы с pre-commit необходимо установить их
+<h3>Installing pre-commit</h3>
+To start working with pre-commit, you need to install them first:
 ```shell
 pip install pre-commit 
 ```
-Либо установить со всеми зависимостями проекта
+Alternatively, you can install all project dependencies:
 ```shell
-pip install -r requirements/requirements.txt
+pip install -r deploy/requirements.txt
 ```
-Далее необходимо выполнить команду
+Then, run the following command:
 ```shell
 pre-commit install
 ```

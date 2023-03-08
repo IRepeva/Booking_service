@@ -9,7 +9,6 @@ done
 
 echo "db launched"
 
-# Apply database migrations
 echo "Apply database migrations"
 cd db/migrator && alembic upgrade head
 cd ../..

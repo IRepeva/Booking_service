@@ -1,39 +1,40 @@
-class BaseAPIException(Exception):
-    message: str = ""
-    extras: dict = {}
+import uuid
+from http import HTTPStatus
+from typing import Iterable
+
+from fastapi import HTTPException
 
 
-class NotFoundException(BaseAPIException):
-    def __init__(self, message: str, extras: dict):
-        self.message = message
-        self.extras = extras
+class NotFoundException(HTTPException):
+    def __init__(self, message: str):
+        super().__init__(status_code=HTTPStatus.NOT_FOUND, detail=message)
 
 
-class UniqueConflictException(BaseAPIException):
-    def __init__(self, message: str, extras: dict):
-        self.message = message
-        self.extras = extras
+class BadRequestException(HTTPException):
+    def __init__(self, message: str):
+        super().__init__(status_code=HTTPStatus.BAD_REQUEST, detail=message)
 
 
-class ForbiddenException(BaseAPIException):
-    def __init__(self, message: str, extras: dict):
-        self.message = "Method not allowed"
-        self.extras = extras
+class ForbiddenException(HTTPException):
+    def __init__(self, message: str):
+        super().__init__(status_code=HTTPStatus.FORBIDDEN, detail=message)
 
 
-class BookingNotFoundException(NotFoundException):
-    def __init__(self, booking_id: str):
-        self.message = f"Booking not found by given ID"
-        self.extras = {"booking_id": booking_id}
+class BookingNotFound(NotFoundException):
+    def __init__(self, booking_id: uuid.UUID):
+        super().__init__(message=f'Booking {booking_id} was not found')
 
 
-class EventNotFoundException(NotFoundException):
-    def __init__(self, event_id: str):
-        self.message = f"Event not found by given ID"
-        self.extras = {"event_id": event_id}
+class EventNotFound(NotFoundException):
+    def __init__(self, event_id: uuid.UUID):
+        super().__init__(message=f'Event {event_id} was not found')
 
 
-class SeatNotFoundException(NotFoundException):
-    def __init__(self, seat_id: str):
-        self.message = f"Seat not found by given ID"
-        self.extras = {"seat_id": seat_id}
+class LocationNotFound(NotFoundException):
+    def __init__(self, location_id: uuid.UUID):
+        super().__init__(message=f'Location {location_id} was not found')
+
+
+class SeatNotFound(NotFoundException):
+    def __init__(self, seat_id: uuid.UUID | Iterable):
+        super().__init__(message=f'Seat(s) {seat_id} was not found')

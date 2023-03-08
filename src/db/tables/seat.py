@@ -32,8 +32,8 @@ class Seat(SimplePrimaryKey, TimeStampMixin, Base):
     location = relationship("Location", back_populates="seats")
 
     seat_events = relationship(
-        "Event", secondary=Booking, back_populates="event_seats", uselist=True
+        "Event", secondary=Booking.__table__, back_populates="event_seats", uselist=True
     )
     seat_guests = relationship(
-        "Guest", secondary=Booking, back_populates="guest_seats", uselist=True
+        "Guest", secondary=Booking.__table__, back_populates="guest_seats", uselist=True
     )

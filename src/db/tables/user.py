@@ -9,10 +9,10 @@ from db.tables.mixins import SimplePrimaryKey, TimeStampMixin, UserMixin
 class Guest(SimplePrimaryKey, TimeStampMixin, UserMixin, Base):
     __tablename__ = "guest"
     guest_events = relationship(
-        "Event", secondary=Booking, back_populates="event_guests", uselist=True
+        "Event", secondary=Booking.__table__, back_populates="event_guests", uselist=True
     )
     guest_seats = relationship(
-        "Seat", secondary=Booking, back_populates="seat_guests", uselist=True
+        "Seat", secondary=Booking.__table__, back_populates="seat_guests", uselist=True
     )
 
 

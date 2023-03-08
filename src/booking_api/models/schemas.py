@@ -1,7 +1,25 @@
 import uuid
-from datetime import datetime, time
+from datetime import datetime
+from datetime import time
 
 from booking_api.models.mixin import MixinModel
+from db.tables import SeatType, BookingStatus
+
+
+class SeatInput(MixinModel):
+    row: int
+    seat: int
+    type: SeatType
+
+    class Config:
+        orm_mode = True
+
+
+class SeatSchema(SeatInput):
+    id: uuid.UUID
+
+    class Config:
+        orm_mode = True
 
 
 class EventInput(MixinModel):
@@ -14,8 +32,18 @@ class EventInput(MixinModel):
     participants: int
 
 
-class Event(EventInput):
+class EventSchema(EventInput):
     id: uuid.UUID
+
+    class Config:
+        orm_mode = True
+
+
+class EventDetails(EventInput):
+    seats: list[SeatSchema]
+
+    class Config:
+        orm_mode = True
 
 
 class LocationEdit(MixinModel):
@@ -29,14 +57,40 @@ class LocationInput(LocationEdit):
     name: str
 
 
-class Location(LocationInput):
-    id: uuid.UUID
+class LocationDetails(LocationInput):
     host_id: uuid.UUID | None
 
+    class Config:
+        orm_mode = True
 
-class SeatInput(MixinModel):
+
+class LocationSchema(LocationDetails):
     id: uuid.UUID
-    row: int
-    seat: int
-    type: int
 
+
+class BookingInput(MixinModel):
+    event_id: uuid.UUID
+    seat_id: uuid.UUID | list[uuid.UUID]
+
+
+class BookingBase(MixinModel):
+    event_id: uuid.UUID
+    status: int | BookingStatus
+
+
+class BookingSchema(BookingBase):
+    id: uuid.UUID
+    guest_id: uuid.UUID
+
+    class Config:
+        orm_mode = True
+
+
+class BookingDetails(BookingBase):
+    seats: SeatSchema
+    event_name: str
+    event_start: datetime
+    event_duration: int
+
+    class Config:
+        orm_mode = True

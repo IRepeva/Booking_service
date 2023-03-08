@@ -33,8 +33,8 @@ def upgrade() -> None:
             onupdate=sa.sql.func.now(),
         ),
         sa.Column("created", sa.DateTime(), nullable=True, default=sa.sql.func.now()),
-        sa.Column("name", sa.String(), nullable=False),
-        sa.Column("phone_number", sa.String(), nullable=False),
+        sa.Column("name", sa.String(), nullable=True),
+        sa.Column("phone_number", sa.String(), nullable=True),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_table(
@@ -48,8 +48,8 @@ def upgrade() -> None:
             onupdate=sa.sql.func.now(),
         ),
         sa.Column("created", sa.DateTime(), nullable=True, default=sa.sql.func.now()),
-        sa.Column("name", sa.String(), nullable=False),
-        sa.Column("phone_number", sa.String(), nullable=False),
+        sa.Column("name", sa.String(), nullable=True),
+        sa.Column("phone_number", sa.String(), nullable=True),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_table(
@@ -154,6 +154,7 @@ def upgrade() -> None:
     )
     op.create_table(
         "booking",
+        sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("seat_id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("event_id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("guest_id", postgresql.UUID(as_uuid=True), nullable=False),
@@ -165,7 +166,6 @@ def upgrade() -> None:
             nullable=False,
             default=BookingStatus.EMPTY,
         ),
-        sa.Column("price", sa.Float(), nullable=True),
         sa.Column(
             "modified",
             sa.DateTime(),
@@ -177,7 +177,7 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["event_id"], ["event.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["guest_id"], ["guest.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["seat_id"], ["seat.id"], ondelete="CASCADE"),
-        sa.PrimaryKeyConstraint("seat_id", "event_id", "guest_id"),
+        sa.PrimaryKeyConstraint("id"),
     )
     # ### end Alembic commands ###
 

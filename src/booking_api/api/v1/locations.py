@@ -1,31 +1,33 @@
 import uuid
-from http import HTTPStatus
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import JSONResponse
 
 from booking_api.models.schemas import (
-    Location, LocationEdit, LocationInput, SeatInput
+    LocationSchema, LocationEdit, LocationInput, LocationDetails,
+    SeatInput
 )
 from booking_api.services.locations import LocationService
 from booking_api.utils.authentication import security, check_authorization
+from booking_api.utils.exceptions import LocationNotFound, BadRequestException
 from db.tables import Seat
 from db.utils.postgres import get_db
 
-router = APIRouter(prefix="/locations")
+router = APIRouter(prefix="/locations", tags=["locations"])
 
 
-@router.post("/", response_model=Location, summary="Add event's location")
+@router.post("/", response_model=LocationSchema, summary="Add event's location")
 async def add_location(
         location: LocationInput,
         session: AsyncSession = Depends(get_db),
         token=Depends(security),
         seats_input: list[SeatInput] | None = None,
-) -> Location:
+) -> LocationSchema:
     """
     Create location with the following data:
 
+    - **id**: unique location identification
     - **name**: each location has a unique name
     - **coordinates**: location's coordinates
     - **open**: open hour
@@ -39,8 +41,13 @@ async def add_location(
         session=session, data=location, user_id=user_id
     )
     if seats_input:
-        seats_data = await LocationService.prepare_seats_data(seats_input,
-                                                              new_location.id)
+        if location.capacity != len(seats_input):
+            raise BadRequestException(
+                message='Information should be provided for every seat'
+            )
+        seats_data = await LocationService.prepare_seats_data(
+            seats_input, new_location.id
+        )
     else:
         seats_data = [
             {
@@ -52,21 +59,20 @@ async def add_location(
     session.add_all([Seat(**seat) for seat in seats_data])
     await session.commit()
 
-    return LocationService.model_to_dict(new_location)
+    return LocationSchema.from_orm(new_location)
 
 
 @router.get(
     "/{location_id}",
-    response_model=Location,
+    response_model=LocationDetails,
     summary="Get detailed information about the location",
 )
 async def location_details(
-    location_id: str, session: AsyncSession = Depends(get_db)
-) -> Location:
+    location_id: uuid.UUID, session: AsyncSession = Depends(get_db)
+) -> LocationDetails:
     """
     Get all location information:
 
-    - **id**: unique id of the location
     - **name**: each location has a unique name
     - **coordinates**: location's coordinates
     - **open**: open hour
@@ -76,21 +82,22 @@ async def location_details(
     """
     location = await LocationService.get_by_id(session, location_id)
     if not location:
-        raise HTTPException(
-            status_code=HTTPStatus.NOT_FOUND,
-            detail=f"Location with id {location_id} is not found",
-        )
+        raise LocationNotFound(location_id)
 
-    return LocationService.model_to_dict(location)
+    return LocationDetails.from_orm(location)
 
 
-@router.put("/{location_id}", response_model=Location, summary="Edit the location")
+@router.put(
+    "/{location_id}",
+    response_model=LocationDetails,
+    summary="Edit the location"
+)
 async def edit_location(
     location_id: uuid.UUID,
     new_location: LocationEdit,
     session: AsyncSession = Depends(get_db),
     token=Depends(security),
-) -> Location:
+) -> LocationDetails:
     """
     Change the location:
 
@@ -104,22 +111,26 @@ async def edit_location(
     location = await LocationService.edit(
         session=session, new_data=new_location, _id=location_id, user_id=user_id
     )
-    return LocationService.model_to_dict(location)
+    return LocationDetails.from_orm(location)
 
 
-@router.put("/{location_id}/rename", response_model=Location, summary="Rename the location")
+@router.put(
+    "/{location_id}/rename",
+    response_model=LocationDetails,
+    summary="Rename the location"
+)
 async def rename_location(
     location_id: uuid.UUID,
     new_name: str,
     session: AsyncSession = Depends(get_db),
     token=Depends(security),
-) -> Location:
+) -> LocationDetails:
     user_id = check_authorization(token)
 
     location = await LocationService.rename(
         session=session, new_name=new_name, _id=location_id, user_id=user_id
     )
-    return LocationService.model_to_dict(location)
+    return LocationDetails.from_orm(location)
 
 
 @router.delete("/{location_id}", summary="Delete location")
@@ -130,7 +141,9 @@ async def delete_location(
 ) -> JSONResponse:
     user_id = check_authorization(token)
 
-    await LocationService.delete(session=session, _id=location_id, user_id=user_id)
+    await LocationService.delete(
+        session=session, _id=location_id, user_id=user_id
+    )
     return JSONResponse(
         status_code=200,
         content={"message": f"Location {location_id} was successfully deleted"},

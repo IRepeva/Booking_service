@@ -1,10 +1,11 @@
 import enum
 
-from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, Table, sql
+from sqlalchemy import Column, ForeignKey, Integer
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy_utils import ChoiceType
 
 from db.tables.base import Base
+from db.tables.mixins import SimplePrimaryKey, TimeStampMixin
 
 
 class BookingStatus(enum.Enum):
@@ -13,45 +14,29 @@ class BookingStatus(enum.Enum):
     BOOKED = 2
 
 
-Booking = Table(
-    "booking",
-    Base.metadata,
-    Column(
-        "id",
-        UUID(as_uuid=True),
-        primary_key=True
-    ),
-    Column(
-        "seat_id",
+class Booking(SimplePrimaryKey, TimeStampMixin, Base):
+    __tablename__ = 'booking'
+
+    seat_id = Column(
+        'seat_id',
         UUID(as_uuid=True),
         ForeignKey("seat.id", ondelete="CASCADE"),
-        primary_key=True,
-        nullable=False,
-    ),
-    Column(
-        "event_id",
+        nullable=False
+    )
+    event_id = Column(
+        'event_id',
         UUID(as_uuid=True),
         ForeignKey("event.id", ondelete="CASCADE"),
-        primary_key=True,
-        nullable=False,
-    ),
-    Column(
-        "guest_id",
+        nullable=False
+    )
+    guest_id = Column(
+        'guest_id',
         UUID(as_uuid=True),
         ForeignKey("guest.id", ondelete="CASCADE"),
-        nullable=True,
-    ),
-    Column(
-        "status",
+        nullable=True
+    )
+    status = Column(
         ChoiceType(BookingStatus, impl=Integer()),
         default=BookingStatus.EMPTY,
-        nullable=False,
-    ),
-    Column("price", Float, default=0),
-    Column("modified", DateTime, default=sql.func.now(), onupdate=sql.func.now()),
-    Column("created", DateTime, default=sql.func.now()),
-)
-
-
-class BookingObject(Base):
-    __table__ = Booking
+        nullable=False
+    )

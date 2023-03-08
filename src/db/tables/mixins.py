@@ -14,5 +14,5 @@ class TimeStampMixin:
 
 
 class UserMixin:
-    name = Column(String, nullable=False)
-    phone_number = Column(String, nullable=False)
+    name = Column(String)
+    phone_number = Column(String)

@@ -1,62 +1,42 @@
-# Сервис для бронирования билетов и организации мероприятий
+# Service for organizing and booking events
 
-## Описание
+## Description
 
-Не всем нравится сидеть дома и смотреть фильмы в одиночку: иногда хочется их посмотреть с компанией единомышленников.
-<br>Для такой возможности реализована сервис организации мероприятий по просмотру фильма и участия в них. Сервис, кроме 
-создания сеансов в кинотеатре, позволяет организовать просмотр фильма вне кинотеатра с друзьями или людьми, 
-разделяющими твои инетересы, а также бронировать места для этих мероприятий.
+The booking service enables to organize and participate in movie watching events. 
+In addition to creating cinema sessions, this service allows to arrange film viewings 
+at other locations or create custom venue.
 
+## Functional capabilities
+ - Organizing an event with a choice of location, time, movie, duration, etc.
+ - Updating event details
+ - Cancelling an event 
+ - Searching for existing events
+ - Booking tickets for created events
+ - Cancelling a reservation
+ - Adding a venue for an event with the ability to specify the hall configuration
+ - Changing the hall configuration
+ - Removing a viewing location to prevent events from being organized there
 
-### Функциональные возможности сервиса (API)
-- Организация мероприятия с выбором 
-  - места
-  - времени
-  - фильма
-- Обновление данных о мероприятии
-- Отмена мероприятия
-- Поиск имеющихся мероприятий
-- Бронирование билетов на созданные мероприятия
-- Отмена бронирования
-- Добавление места для мероприятия с возможностью указания конфигурации зала
-- Изменение конфигурации зала
-- Удаление места просмотра для запрета организации мероприятий в нем
+More detailed API documentation can be found [here](0.0.0.0:80/api/openapi)
 
+## Get started
+1. Create a **.env** file in the root directory of the project, based on the example [.env.example](.env.example)
 
-#### Описание архитектуры проекта находится в директории docs/architecture
-
-## Запуск проекта
-В корне проекта создайте файл .env, опираясь на пример [.env.example](.env.example)
-
-
-
-Для запуска проекта воспользуйтесь командой 
-
-```bash
-make start-service
-```
-
-Перед началом использования не забудьте обновить схему БД до актуального состояния
-
-```bash
-make migration-upgrade
-```
-
-### Документацию API можно найти в [здесь](localhost:80/api/openapi)
-<br>Для успешной аутентификации перeдайте jwt токен, сгенерированный на основе ключа, который вы указали в .env 
-```bash
-import jwt
-import os
-import uuid
-jwt.encode({"user_id": uuid.uuid4()}, os.environ.get('JWT_SECRET'), algorithm="HS256")
-```
-
-### Имеющиеся make-команды
-- start: запуск сервера и обновление схемы бд 
-- stop: остановка сервиса
-- start-service: запуск сервиса
-- migration-upgrade: обновление схемы бд
-- migration-downgrade: откат миграции
-
-## Разработчикам
-Инструкцию для начала разработки можно найти [здесь](docs%2Fdevelopment.md) 
+2. To run the project, use the command:
+   ```bash
+    make start-service
+    ```
+3. To authenticate, pass a JWT token generated based on the key ('JWT_SECRET') you specified in .env:
+    
+    **Example:**
+    ```bash
+    import jwt
+    jwt.encode({"user_id": 'f2e7425b-746a-4b5f-940f-89da0e7ad9ba'}, "test_Pups_secret", algorithm="HS256")
+    ```
+### Available make commands
+ - **start**: start the server and update the database schema
+ - **stop**: stop the service
+ - **start-service**: start the service
+ - **migration-upgrade**: update the database schema
+ - **migration-downgrade**: roll back the migration
+ - **make local-start**: start local service

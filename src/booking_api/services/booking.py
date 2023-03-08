@@ -1,229 +1,134 @@
-from datetime import datetime
 import uuid
-from sqlalchemy import delete, update
-from sqlalchemy.exc import IntegrityError
+from typing import Iterable
+
+from sqlalchemy import func, Integer, cast
+from sqlalchemy import update
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
-from booking_api.models.booking import (
-    EventShemaList, SeatSchema, BookingInput, BookingSchema, BookingInfoSchema
+from booking_api.models.schemas import (
+    BookingInput, BookingSchema, BookingDetails
 )
-from booking_api.services.service_mixin import ServiceMixin
+from booking_api.services.base import BaseService
+from booking_api.services.events import EventService
 from booking_api.utils.exceptions import (
-    ForbiddenException, BookingNotFoundException, EventNotFoundException,
-    SeatNotFoundException, UniqueConflictException
+    EventNotFound, SeatNotFound, BookingNotFound, BadRequestException,
+    ForbiddenException
 )
-from db.tables.booking import BookingObject
-from db.tables import Seat
-from db.tables import PurchasedMovie
-from db.tables import Location
-from db.tables import Event
+from db.tables import Seat, Event
+from db.tables.booking import BookingStatus, Booking
 
 
-class BookingService(ServiceMixin):
+class BookingService(BaseService):
+    model = Booking
+    instance: str = 'booking'
 
-    async def get_events(self) -> list[EventShemaList]:
-        query_seats = (
-            select(BookingObject.seat_id).filter(BookingObject.event_id == Event.id)
-        )
-        query = (
-            select(
-                Event.id, Event.name, Event.start, Event.duration,
-                PurchasedMovie.movie_name, Location.name.label("location_name"),
-                Seat.id.label("seat_id"), Seat.row, Seat.seat, Seat.type
-            )
-            .select_from(Event)
-            .join(
-                PurchasedMovie, Event.movie_id == PurchasedMovie.movie_id,
-            )
-            .join(
-                Seat, Seat.location_id == Event.location_id,
-            )
-            .join(
-                Location, Location.id == Event.location_id,
-            )
-            .where(
-                Event.start > datetime.now(),
-                ~Seat.id.in_(query_seats)
-            )
-            .order_by(Event.start)
-        )
-        events = await self.session.execute(query)
-        results = []
-        for result in events:
-            event_id = result.id
-            event_object = EventShemaList(
-                id=event_id,
-                name=result.name,
-                start=result.start,
-                duration=result.duration,
-                movie_name=result.movie_name,
-                location_name=result.location_name,
-                seats=[
-                    SeatSchema.from_orm(result)
-                ]
-            )
-            if results and results[-1].id == event_id:
-                results[-1].seats.extend(event_object.seats)
-            else:
-                results.append(event_object)
+    @classmethod
+    async def create(
+            cls, session: AsyncSession, data: BookingInput,
+            user_id: uuid.UUID, extra: dict = None, commit=True
+    ) -> BookingSchema:
+        await cls.validate(data, session=session)
 
-        return results
-
-    async def get_event(self, event_id: str) -> EventShemaList:
-        query = (
-            select(
-                Event.id, Event.name, Event.start, Event.duration,
-                PurchasedMovie.movie_name, Location.name.label("location_name"),
-                Seat.id.label("seat_id"), Seat.row, Seat.seat, Seat.type
-            )
-            .select_from(Event)
-            .join(
-                PurchasedMovie,
-                Event.movie_id == PurchasedMovie.movie_id,
-            )
-            .join(
-                Seat,
-                Seat.location_id == Event.location_id,
-            )
-            .join(
-                Location,
-                Location.id == Event.location_id,
-            )
-            .where(
-                Event.id == event_id
-            )
-        )
-        events = await self.session.execute(query)
-        results = {}
-        for result in events:
-            event_object = EventShemaList(
-                id=result.id,
-                name=result.name,
-                start=result.start,
-                duration=result.duration,
-                movie_name=result.movie_name,
-                location_name=result.location_name,
-                seats=[
-                    SeatSchema.from_orm(result)
-                ]
-            )
-            event_id = result.id
-            if event_id in results:
-                results[event_id].seats.extend(event_object.seats)
-            else:
-                results[event_id] = event_object
-
-        return results.get(event_id)
-
-    async def create(self, data: BookingInput, user_id: str) -> BookingSchema:
-        event = await self.get_event(data.event_id)
-        if not event:
-            raise EventNotFoundException(data.event_id)
-        if not any(seat.seat_id == data.seat_id for seat in event.seats):
-            raise SeatNotFoundException(data.seat_id)
-        try:
-            booking = BookingObject(
-                id=str(uuid.uuid4()),
-                seat_id=data.seat_id,
-                event_id=data.event_id,
-                guest_id=user_id,
-                status=1,
-            )
-            self.session.add(booking)
-            await self.session.commit()
-        except IntegrityError as e:
-            raise UniqueConflictException(message="This booking already exist")
+        extra = {'guest_id': user_id, 'status': BookingStatus.RESERVED.value}
+        booking = await super().create(session, data, user_id, extra)
         return BookingSchema.from_orm(booking)
 
-    async def get_booking(self, booking_id: str) -> BookingInfoSchema:
-        query = (
-            select(
-                BookingObject.id, BookingObject.status, BookingObject.event_id,
-                BookingObject.seat_id,
-                BookingObject.price, BookingObject.guest_id, Event.id.label("event_id"),
-                Event.name.label("event_name"), Event.start.label("event_start"),
-                Event.duration.label("event_duration"),
-                Seat.row.label("seat_row"), Seat.seat.label("seat_seat"),
-                Seat.type.label("seat_type")
-            )
-            .select_from(BookingObject)
-            .outerjoin(
-                Event,
-                Event.id == BookingObject.event_id,
-            )
-            .outerjoin(
-                Seat,
-                Seat.id == BookingObject.seat_id,
-            )
-            .where(
-                BookingObject.id == booking_id
-            )
-        )
-        booking = await self.session.execute(query)
-        booking = booking.first()
-        return BookingInfoSchema.from_orm(booking)
+    @classmethod
+    async def get_booking(
+            cls, session: AsyncSession, booking_id: uuid.UUID
+    ) -> BookingDetails:
 
-    async def get_bookings(self, user_id: str) -> list[BookingInfoSchema]:
-        query = (
+        query = cls.get_booking_query(filters=(Booking.id == booking_id,))
+        booking = (await session.execute(query)).first()
+        return BookingDetails.from_orm(booking)
+
+    @classmethod
+    async def get_bookings(
+            cls, session: AsyncSession, user_id: uuid.UUID
+    ) -> list[BookingDetails]:
+        query = cls.get_booking_query(filters=(Booking.guest_id == user_id,))
+        bookings = (await session.execute(query)).all()
+        return [BookingDetails.from_orm(booking) for booking in bookings]
+
+    @staticmethod
+    def get_booking_query(filters: Iterable):
+        return (
             select(
-                BookingObject.id, BookingObject.status, BookingObject.event_id,
-                BookingObject.seat_id,
-                BookingObject.price, BookingObject.guest_id, Event.id.label("event_id"),
-                Event.name.label("event_name"), Event.start.label("event_start"),
+                Booking.id, cast(Booking.status, Integer),
+                func.json_build_object(
+                    'id', Seat.id,
+                    'row', Seat.row,
+                    'seat', Seat.seat,
+                    'type', Seat.type
+                ).label('seats'),
+                Event.id.label("event_id"),
+                Event.name.label("event_name"),
+                Event.start.label("event_start"),
                 Event.duration.label("event_duration"),
-                Seat.row.label("seat_row"), Seat.seat.label("seat_seat"),
-                Seat.type.label("seat_type")
             )
-            .select_from(BookingObject)
+            .select_from(Booking)
             .join(
-                Event,
-                Event.id == BookingObject.event_id,
+                Event, Event.id == Booking.event_id,
             )
             .join(
-                Seat,
-                Seat.id == BookingObject.seat_id,
+                Seat, Seat.id == Booking.seat_id,
             )
-            .where(
-                BookingObject.guest_id == user_id
-            )
+            .where(*filters)
         )
-        bookings = await self.session.execute(query)
-        bookings = bookings.all()
-        return [BookingInfoSchema.from_orm(booking) for booking in bookings]
 
-    async def delete_booking(self, booking_id: str, user_id: str) -> dict:
-        booking = await self.check_booking(booking_id)
-        if not booking:
-            raise BookingNotFoundException(booking_id)
-        if booking.guest_id != user_id:
-            raise ForbiddenException()
+    @classmethod
+    async def update_booking_status(
+            cls,
+            session: AsyncSession,
+            booking_id: uuid.UUID,
+            new_status: int,
+            user_id: uuid.UUID
+    ) -> dict:
+        await cls.validate_user(session, booking_id, user_id)
         query = (
-            delete(BookingObject)
-            .where(BookingObject.id == booking_id)
-        )
-        await self.session.execute(query)
-        await self.session.commit()
-        return {"msg": "booking was deleted"}
-
-    async def update_booking_status(self, booking_id: str,
-                                    new_status: int, user_id: str) -> dict:
-        booking = await self.check_booking(booking_id)
-        if not booking:
-            raise BookingNotFoundException(booking_id)
-        if booking.guest_id != user_id:
-            raise ForbiddenException()
-        query = (
-            update(BookingObject)
-            .where(BookingObject.id == booking_id)
+            update(Booking)
+            .where(Booking.id == booking_id)
             .values(status=new_status)
         )
-        await self.session.execute(query)
-        await self.session.commit()
+        await session.execute(query)
+        await session.commit()
         return {"msg": "booking status was updated"}
 
-    async def check_booking(self, booking_id: str):
-        booking = await self.session.execute(
-            select(BookingObject.id, BookingObject.guest_id, BookingObject.status)
-            .where(BookingObject.id == booking_id)
+    @classmethod
+    async def validate(cls, data: BookingInput, *args, **kwargs):
+        session = kwargs['session']
+        event = await EventService.get_by_id(session, data.event_id)
+        if not event:
+            raise EventNotFound(data.event_id)
+
+        event_seats = await cls.get_all(
+            session, Seat.id, filters=(Seat.location_id == event.location_id,)
         )
-        return booking.first()
+
+        if data.seat_id not in event_seats:
+            raise SeatNotFound(data.seat_id)
+
+        occupied_seats = await cls.get_all(
+            session, Booking.seat_id,
+            filters=(Booking.event_id == data.event_id,)
+        )
+        if data.seat_id in occupied_seats:
+            raise BadRequestException(
+                message=f'Seat {data.seat_id} is already occupied'
+            )
+
+    @classmethod
+    async def validate_user(
+            cls, session: AsyncSession, _id: uuid.UUID, user_id: uuid.UUID
+    ):
+        booking = await cls.get_by_id(session, _id)
+        if not booking:
+            raise BookingNotFound(_id)
+
+        if str(booking.guest_id) != user_id:
+            raise ForbiddenException(
+                message=f"Only guest can modify the booking {_id}"
+            )
+
+        return booking

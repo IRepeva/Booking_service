@@ -26,11 +26,11 @@ class Event(SimplePrimaryKey, TimeStampMixin, Base):
     host = relationship("Host", back_populates="events")
 
     event_seats = relationship(
-        "Seat", secondary=Booking, back_populates="seat_events", uselist=True
+        "Seat", secondary=Booking.__table__, back_populates="seat_events", uselist=True
     )
     event_guests = relationship(
         "Guest",
-        secondary=Booking,
+        secondary=Booking.__table__,
         back_populates="guest_events",
         uselist=True,
         overlaps="event_seats",
